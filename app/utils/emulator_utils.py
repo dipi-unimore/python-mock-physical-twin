@@ -34,15 +34,13 @@ class ActuatorType(Enum):
 
 
 class ProtocolType(Enum):
-    """
-    Enumeration defining types of communication protocols.
+    """Enumeration defining types of communication protocols."""
 
-    Attributes:
-        HTTP_PROTOCOL_TYPE (str): HTTP protocol type.
-        MQTT_PROTOCOL_TYPE (str): MQTT protocol type.
-    """
     HTTP_PROTOCOL_TYPE = "http"
     MQTT_PROTOCOL_TYPE = "mqtt"
+    SIMULATION_BRIDGE_AMQP_PROTOCOL_TYPE = "simulation_bridge_amqp"
+    SIMULATION_BRIDGE_MQTT_PROTOCOL_TYPE = "simulation_bridge_mqtt"
+    SIMULATION_BRIDGE_REST_PROTOCOL_TYPE = "simulation_bridge_rest"
 
 
 class TimeUnit(Enum):

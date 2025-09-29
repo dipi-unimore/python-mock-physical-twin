@@ -1,0 +1,23 @@
+protocols:
+  - id: "simulationBridge"
+    type: "simulation_bridge_rest"
+    config:
+      client_config: "rest_use.yaml"
+      simulation_api: "simulation.yaml"
+      aggregate:
+        device_id: "device1"
+        sensor_id: "bridgeAggregate"
+        sensor_config:
+          type: "string"
+          update_time_ms: 1000
+devices:
+  - id: "device1"
+    protocol_id: "simulationBridge"
+    sensors:
+      - id: "bridgeAggregate"
+        type: "string"
+        update_time_ms: 60000
+        initial_value: {}
+    actuators: []
+independent_communication: False
+device_update_delay_ms: 1000
