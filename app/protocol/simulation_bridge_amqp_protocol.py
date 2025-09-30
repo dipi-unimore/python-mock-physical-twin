@@ -45,7 +45,6 @@ class SimulationBridgeAmqpProtocol(Protocol):
         )
 
         self.base_path = Path(self.config.get("base_path", ".")).resolve()
-        self.client_config_path = self._resolve_path(self.config["client_config"])
         self.simulation_api_path = self._resolve_path(self.config["simulation_api"])
 
         aggregate_cfg = self.config.get("aggregate", {})
@@ -55,7 +54,15 @@ class SimulationBridgeAmqpProtocol(Protocol):
             "sensor_config"
         )
 
-        self.client_config = self._load_yaml(self.client_config_path)
+        client_cfg_value = self.config.get("client_config")
+        if isinstance(client_cfg_value, str):
+            client_cfg_path = self._resolve_path(client_cfg_value)
+            self.client_config = self._load_yaml(client_cfg_path)
+        elif isinstance(client_cfg_value, dict):
+            self.client_config = client_cfg_value
+        else:
+            raise InvalidConfigurationError(["client_config"])
+
         self.simulation_payload = self._load_yaml(self.simulation_api_path)
 
         self.connection: Optional[pika.BlockingConnection] = None
@@ -129,6 +136,12 @@ class SimulationBridgeAmqpProtocol(Protocol):
         if not isinstance(data, dict):
             raise ValueError(f"YAML file {path} did not contain a dictionary")
         return data
+
+    @staticmethod
+    def _extract_data_field(payload: Any) -> Optional[Any]:
+        if isinstance(payload, dict):
+            return payload.get("data")
+        return None
 
     def _ensure_connection(self) -> None:
         if self.connection and self.connection.is_open and self.channel and self.channel.is_open:
@@ -253,11 +266,13 @@ class SimulationBridgeAmqpProtocol(Protocol):
             channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
             return
 
-        sensor = self._ensure_aggregate_sensor()
-        if sensor is not None:
-            with self._sensor_lock:
-                sensor.last_value = result
-                sensor.last_update_time = 0
+        data_payload = self._extract_data_field(result)
+        if data_payload is not None:
+            sensor = self._ensure_aggregate_sensor()
+            if sensor is not None:
+                with self._sensor_lock:
+                    sensor.last_value = data_payload
+                    sensor.last_update_time = 0
 
         channel.basic_ack(delivery_tag=method.delivery_tag)
 

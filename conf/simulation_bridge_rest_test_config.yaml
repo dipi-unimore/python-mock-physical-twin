@@ -2,7 +2,15 @@ protocols:
   - id: "simulationBridge"
     type: "simulation_bridge_rest"
     config:
-      client_config: "rest_use.yaml"
+      server_port: 5556
+      client_config:
+        url: "https://127.0.0.1:5000/message"
+        secret: "CHANGE_ME_TO_A_LONG_RANDOM_VALUE"
+        issuer: "simulation-bridge"
+        subject: "client-123"
+        ttl: 900
+        timeout: 600
+        ssl_verify: false
       simulation_api: "simulation.yaml"
       aggregate:
         device_id: "device1"

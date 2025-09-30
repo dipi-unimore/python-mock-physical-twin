@@ -42,7 +42,6 @@ class SimulationBridgeMqttProtocol(Protocol):
         )
 
         self.base_path = Path(self.config.get("base_path", ".")).resolve()
-        self.client_config_path = self._resolve_path(self.config["client_config"])
         self.simulation_api_path = self._resolve_path(self.config["simulation_api"])
 
         aggregate_cfg = self.config.get("aggregate", {})
@@ -52,7 +51,15 @@ class SimulationBridgeMqttProtocol(Protocol):
             "sensor_config"
         )
 
-        self.client_config = self._load_yaml(self.client_config_path)
+        client_cfg_value = self.config.get("client_config")
+        if isinstance(client_cfg_value, str):
+            client_cfg_path = self._resolve_path(client_cfg_value)
+            self.client_config = self._load_yaml(client_cfg_path)
+        elif isinstance(client_cfg_value, dict):
+            self.client_config = client_cfg_value
+        else:
+            raise InvalidConfigurationError(["client_config"])
+
         self.simulation_payload = self._load_yaml(self.simulation_api_path)
 
         self._validate_client_config(self.client_config)
@@ -192,12 +199,16 @@ class SimulationBridgeMqttProtocol(Protocol):
             except json.JSONDecodeError:
                 parsed = payload_text
 
+        data_payload = self._extract_data_field(parsed)
+        if data_payload is None:
+            return
+
         sensor = self._ensure_aggregate_sensor()
         if sensor is None:
             return
 
         with self._sensor_lock:
-            sensor.last_value = parsed
+            sensor.last_value = data_payload
             sensor.last_update_time = 0
 
     def _publish_simulation_request(self) -> None:
@@ -256,6 +267,12 @@ class SimulationBridgeMqttProtocol(Protocol):
         return data
 
     @staticmethod
+    def _extract_data_field(payload: Any) -> Optional[Any]:
+        if isinstance(payload, dict):
+            return payload.get("data")
+        return None
+
+    @staticmethod
     def _validate_client_config(config: Dict[str, Any]) -> None:
         mqtt_cfg = config.get("mqtt")
         if not isinstance(mqtt_cfg, dict):
@@ -265,4 +282,3 @@ class SimulationBridgeMqttProtocol(Protocol):
         missing = [key for key in required_keys if key not in mqtt_cfg or mqtt_cfg[key] is None]
         if missing:
             raise InvalidConfigurationError([f"client_config.mqtt.{key}" for key in missing])
-

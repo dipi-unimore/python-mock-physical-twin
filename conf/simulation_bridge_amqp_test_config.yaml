@@ -2,7 +2,30 @@ protocols:
   - id: "simulationBridge"
     type: "simulation_bridge_amqp"
     config:
-      client_config: "rabbitmq_use.yaml"
+      client_config:
+        rabbitmq:
+          host: "localhost"
+          port: 5672
+          vhost: "/"
+          username: "guest"
+          password: "guest"
+          tls: false
+        exchanges:
+          input_bridge:
+            name: "ex.input.bridge"
+            type: "topic"
+            durable: true
+          bridge_result:
+            name: "ex.bridge.result"
+            type: "topic"
+            durable: true
+        queue:
+          result_queue_prefix: "Q"
+          durable: true
+          routing_key: "*.result"
+        digital_twin:
+          dt_id: "dt"
+          routing_key_send: "dt"
       simulation_api: "simulation.yaml"
       aggregate:
         device_id: "device1"

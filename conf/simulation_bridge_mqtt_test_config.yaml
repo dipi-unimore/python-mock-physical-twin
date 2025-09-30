@@ -2,7 +2,17 @@ protocols:
   - id: "simulationBridge"
     type: "simulation_bridge_mqtt"
     config:
-      client_config: "mqtt_use.yaml"
+      client_config:
+        mqtt:
+          host: "localhost"
+          port: 1883
+          keepalive: 60
+          qos: 0
+          input_topic: "bridge/input"
+          output_topic: "bridge/output"
+          username: "guest"
+          password: "guest"
+          tls: false
       simulation_api: "simulation.yaml"
       aggregate:
         device_id: "device1"
