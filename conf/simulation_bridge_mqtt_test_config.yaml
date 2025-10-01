@@ -20,6 +20,47 @@ protocols:
         sensor_config:
           type: "string"
           update_time_ms: 1000
+      routes:
+        - when:
+            type: "all"
+          publish:
+            topic: "sim/data"
+            payload: "{raw}"
+        - when:
+            type: "json_path"
+            path: "agents"
+            foreach: true
+          publish:
+            topic: "sim/agents/{index}"
+            payload:
+              x: "{0}"
+              y: "{1}"
+        - when:
+            type: "json_path"
+            path: "agents"
+            foreach: true
+          publish:
+            topic: "sim/agents/{index}/x"
+            payload: "{0}"
+        - when:
+            type: "json_path"
+            path: "agents"
+            foreach: true
+          publish:
+            topic: "sim/agents/{index}/y"
+            payload: "{1}"
+        - when:
+            type: "json_path"
+            path: "distance"
+          publish:
+            topic: "sim/distance"
+            payload: "{value}"
+        - when:
+            type: "json_path"
+            path: "step"
+          publish:
+            topic: "sim/step"
+            payload: "{value}"
 devices:
   - id: "device1"
     protocol_id: "simulationBridge"

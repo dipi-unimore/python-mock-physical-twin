@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import MethodType
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import ssl
 import threading
@@ -22,6 +22,7 @@ from app.protocol.protocol import (
     Protocol,
     validate_dict_keys,
 )
+from app.utils.result_router import ResultRouter, normalise_routes_config
 from app.utils.emulator_utils import ProtocolType
 
 if TYPE_CHECKING:
@@ -64,6 +65,8 @@ class SimulationBridgeAmqpProtocol(Protocol):
             raise InvalidConfigurationError(["client_config"])
 
         self.simulation_payload = self._load_yaml(self.simulation_api_path)
+
+        self._router = self._build_router()
 
         self.connection: Optional[pika.BlockingConnection] = None
         self.channel: Optional[BlockingChannel] = None
@@ -274,7 +277,95 @@ class SimulationBridgeAmqpProtocol(Protocol):
                     sensor.last_value = data_payload
                     sensor.last_update_time = 0
 
+            self._dispatch_routes(data_payload)
+
         channel.basic_ack(delivery_tag=method.delivery_tag)
+
+    def _dispatch_routes(self, data_payload: Any) -> None:
+        router = getattr(self, "_router", None)
+        if router is None or not router.has_routes:
+            return
+
+        channel = self.channel
+        if channel is None or not channel.is_open:
+            return
+
+        messages = router.dispatch(data_payload)
+        if not messages:
+            return
+
+        exchanges_cfg = self.client_config.get("exchanges", {})
+        default_exchange = (
+            exchanges_cfg.get("bridge_result", {}).get("name")
+            if isinstance(exchanges_cfg, dict)
+            else None
+        )
+
+        for message in messages:
+            routing_key = message.routing_key or message.topic
+            if not routing_key:
+                continue
+
+            exchange = message.exchange or default_exchange or ""
+            body = message.payload.encode("utf-8")
+            delivery_mode = 2 if message.persistent is None or message.persistent else 1
+            properties_kwargs: Dict[str, Any] = {
+                "delivery_mode": delivery_mode,
+                "content_type": message.content_type or "application/json",
+            }
+            if message.headers:
+                properties_kwargs["headers"] = {
+                    str(key): str(value) for key, value in message.headers.items()
+                }
+
+            properties = pika.BasicProperties(**properties_kwargs)
+
+            try:
+                channel.basic_publish(
+                    exchange=exchange,
+                    routing_key=routing_key,
+                    body=body,
+                    properties=properties,
+                )
+            except Exception as exc:  # pragma: no cover - broker error path
+                print(
+                    f"Failed to publish routed AMQP message to {exchange or '[default]'}"
+                    f" with routing_key {routing_key}: {exc}"
+                )
+
+    def _build_router(self) -> ResultRouter:
+        routes_config = self._load_routes_config()
+        return ResultRouter(routes_config)
+
+    def _load_routes_config(self) -> Optional[List[Dict[str, Any]]]:
+        combined: List[Dict[str, Any]] = []
+        inline_value = self.config.get("routes")
+        if inline_value is not None:
+            if isinstance(inline_value, str):
+                inline_value = self._load_routes_file(inline_value)
+            try:
+                inline_routes = normalise_routes_config(inline_value)
+            except ValueError as exc:  # pragma: no cover - configuration error path
+                raise InvalidConfigurationError(["config.routes"]) from exc
+            if inline_routes:
+                combined.extend(inline_routes)
+
+        routes_file_value = self.config.get("routes_file")
+        if routes_file_value is not None:
+            file_data = self._load_routes_file(routes_file_value)
+            try:
+                file_routes = normalise_routes_config(file_data)
+            except ValueError as exc:  # pragma: no cover - configuration error path
+                raise InvalidConfigurationError(["config.routes_file"]) from exc
+            if file_routes:
+                combined.extend(file_routes)
+
+        return combined or None
+
+    def _load_routes_file(self, path_value: str) -> Any:
+        path = self._resolve_path(path_value)
+        with path.open("r", encoding="utf-8") as handle:
+            return yaml.safe_load(handle) or []
 
     def _ensure_aggregate_sensor(self) -> Optional[Sensor]:
         with self._sensor_lock:

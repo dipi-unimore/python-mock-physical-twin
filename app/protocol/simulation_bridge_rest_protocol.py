@@ -8,13 +8,14 @@ import threading
 import time
 from pathlib import Path
 from types import MethodType
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
+from urllib.parse import urljoin, urlparse
 
 import httpx
 import jwt
 import yaml
 
-from flask import Flask, abort, jsonify, request
+from flask import Flask, abort, jsonify, make_response, request
 
 from app.device.sensor import Sensor
 
@@ -23,6 +24,7 @@ from app.protocol.protocol import (
     Protocol,
     validate_dict_keys,
 )
+from app.utils.result_router import ResultRouter, normalise_routes_config
 from app.utils.emulator_utils import ProtocolType
 
 if TYPE_CHECKING:
@@ -66,6 +68,26 @@ class SimulationBridgeRestProtocol(Protocol):
 
         self.simulation_payload_bytes = self.simulation_api_path.read_bytes()
 
+        server_routes_cfg = self.config.get("server_routes")
+        self._server_routes_defaults: bool = True
+        self._custom_server_routes: List[Dict[str, Any]] = []
+        if server_routes_cfg is not None:
+            if not isinstance(server_routes_cfg, dict):
+                raise InvalidConfigurationError(["server_routes"])
+            self._server_routes_defaults = bool(server_routes_cfg.get("defaults", True))
+            routes_value = server_routes_cfg.get("routes") or []
+            if not isinstance(routes_value, list):
+                raise InvalidConfigurationError(["server_routes.routes"])
+            for index, route_cfg in enumerate(routes_value):
+                if not isinstance(route_cfg, dict):
+                    raise InvalidConfigurationError([f"server_routes.routes[{index}]"])
+                self._custom_server_routes.append(dict(route_cfg))
+
+        self._custom_route_storage: Dict[str, Dict[str, Any]] = {}
+        self._custom_route_lock = threading.Lock()
+
+        self._router = self._build_router()
+
         self._stop_event = threading.Event()
         self._sensor_lock = threading.Lock()
         self._aggregate_sensor: Optional[Sensor] = None
@@ -80,6 +102,17 @@ class SimulationBridgeRestProtocol(Protocol):
                 raise InvalidConfigurationError(["server_port"]) from exc
         else:
             self._server_port = None
+
+        dispatch_base_value = self.config.get("dispatch_base_url")
+        if isinstance(dispatch_base_value, str) and dispatch_base_value:
+            self._dispatch_base_url = dispatch_base_value.rstrip("/")
+        elif self._server_port is not None:
+            host_for_dispatch = self._server_host
+            if host_for_dispatch in {"0.0.0.0", "::"}:
+                host_for_dispatch = "127.0.0.1"
+            self._dispatch_base_url = f"http://{host_for_dispatch}:{self._server_port}"
+        else:
+            self._dispatch_base_url = None
 
         self.app: Optional[Flask] = None
         self._server_thread: Optional[threading.Thread] = None
@@ -98,6 +131,36 @@ class SimulationBridgeRestProtocol(Protocol):
         aggregate_cfg = self.config.get("aggregate", {})
         if not validate_dict_keys(aggregate_cfg, ["device_id", "sensor_id"]):
             raise InvalidConfigurationError(["aggregate.device_id", "aggregate.sensor_id"])
+
+        server_routes_cfg = self.config.get("server_routes")
+        if server_routes_cfg is not None:
+            if not isinstance(server_routes_cfg, dict):
+                raise InvalidConfigurationError(["server_routes"])
+            routes_cfg = server_routes_cfg.get("routes")
+            if routes_cfg is not None and not isinstance(routes_cfg, list):
+                raise InvalidConfigurationError(["server_routes.routes"])
+            if isinstance(routes_cfg, list):
+                for index, route_cfg in enumerate(routes_cfg):
+                    if not isinstance(route_cfg, dict):
+                        raise InvalidConfigurationError([f"server_routes.routes[{index}]"])
+                    path_value = route_cfg.get("path")
+                    if not isinstance(path_value, str) or not path_value:
+                        raise InvalidConfigurationError([f"server_routes.routes[{index}].path"])
+                    methods_value = route_cfg.get("methods")
+                    if methods_value is not None:
+                        if isinstance(methods_value, str):
+                            pass
+                        elif isinstance(methods_value, (list, tuple)):
+                            if not all(isinstance(item, str) for item in methods_value):
+                                raise InvalidConfigurationError(
+                                    [f"server_routes.routes[{index}].methods"]
+                                )
+                        else:
+                            raise InvalidConfigurationError([f"server_routes.routes[{index}].methods"])
+
+        dispatch_base_url = self.config.get("dispatch_base_url")
+        if dispatch_base_url is not None and not isinstance(dispatch_base_url, str):
+            raise InvalidConfigurationError(["dispatch_base_url"])
 
     def start(self) -> None:  # type: ignore[override]
         print(f"Starting protocol: {self.id} Type: {self.type}")
@@ -170,6 +233,16 @@ class SimulationBridgeRestProtocol(Protocol):
         if self.app is None or self._routes_configured:
             return
 
+        if self._server_routes_defaults:
+            self._register_default_routes()
+
+        if self._custom_server_routes:
+            self._register_custom_routes(self._custom_server_routes)
+
+        self._routes_configured = True
+
+    def _register_default_routes(self) -> None:
+        assert self.app is not None
         app = self.app
 
         @app.route("/devices", methods=["GET"], endpoint="simulation_bridge_devices")
@@ -274,7 +347,238 @@ class SimulationBridgeRestProtocol(Protocol):
                 return ("", 204)
             abort(404, description=f"Actuator {actuator_id} not found")
 
-        self._routes_configured = True
+    def _register_custom_routes(self, routes_config: List[Dict[str, Any]]) -> None:
+        assert self.app is not None
+        app = self.app
+
+        for index, route_config in enumerate(routes_config):
+            path_value = route_config.get("path")
+            if not isinstance(path_value, str) or not path_value:
+                print(
+                    f"Skipping custom server route at index {index}: missing or invalid 'path'"
+                )
+                continue
+
+            methods_value = route_config.get("methods")
+            if methods_value is None:
+                methods = ["POST"]
+            elif isinstance(methods_value, str):
+                methods = [methods_value]
+            else:
+                methods = [str(method) for method in methods_value if isinstance(method, str)]
+                if not methods:
+                    methods = ["POST"]
+            methods = [method.upper() for method in methods]
+
+            endpoint_value = route_config.get("endpoint")
+            if not isinstance(endpoint_value, str) or not endpoint_value:
+                endpoint_value = f"{self.id}-custom-{index}"
+
+            handler = self._build_custom_route_handler(path_value, methods, route_config)
+
+            try:
+                app.add_url_rule(
+                    path_value,
+                    endpoint=endpoint_value,
+                    view_func=handler,
+                    methods=methods,
+                )
+            except AssertionError:
+                print(
+                    f"Custom server route '{path_value}' already registered, skipping duplicate"
+                )
+
+    def _build_custom_route_handler(
+        self,
+        path: str,
+        methods: List[str],
+        route_config: Dict[str, Any],
+    ) -> Callable[..., Any]:
+        store_last = bool(route_config.get("store_last", False))
+        response_cfg = route_config.get("response")
+        log_payload = bool(route_config.get("log_payload", False))
+        store_methods = {"POST", "PUT", "PATCH"}
+
+        def handler(**kwargs):  # type: ignore[override]
+            method = request.method.upper()
+
+            if method in store_methods:
+                payload, is_json, content_type = self._extract_request_payload()
+                if store_last:
+                    self._store_custom_route_value(request.path, payload, is_json, content_type)
+                if log_payload:
+                    try:
+                        formatted = json.dumps(payload, ensure_ascii=False)
+                    except TypeError:
+                        formatted = str(payload)
+                    print(f"[simulation_bridge_rest] Stored payload for {request.path}: {formatted}")
+                return self._respond_with_config(response_cfg, method, default_status=204)
+
+            if method == "DELETE":
+                if store_last:
+                    self._remove_custom_route_value(request.path)
+                return self._respond_with_config(response_cfg, method, default_status=204)
+
+            if method == "GET":
+                response_cfg_get = self._select_response_config(response_cfg, method)
+                if store_last:
+                    stored_payload = self._get_custom_route_value(request.path)
+                    if stored_payload is not None:
+                        if response_cfg_get and "body" in response_cfg_get:
+                            return self._make_response_from_config(response_cfg_get, default_status=200)
+                        status_code = int((response_cfg_get or {}).get("status_code", 200))
+                        headers = (response_cfg_get or {}).get("headers")
+                        return self._make_stored_response(stored_payload, status_code, headers)
+                return self._make_response_from_config(response_cfg_get, default_status=204)
+
+            return self._respond_with_config(response_cfg, method, default_status=204)
+
+        handler.__name__ = route_config.get(
+            "endpoint", f"custom_route_handler_{hash(path)}_{id(route_config)}"
+        )
+        return handler
+
+    def _respond_with_config(
+        self,
+        response_cfg: Any,
+        method: str,
+        default_status: int,
+    ) -> Any:
+        config = self._select_response_config(response_cfg, method)
+        return self._make_response_from_config(config, default_status)
+
+    @staticmethod
+    def _select_response_config(response_cfg: Any, method: str) -> Optional[Dict[str, Any]]:
+        if not isinstance(response_cfg, dict):
+            return None
+
+        simple_keys = {"body", "status_code", "headers", "content_type"}
+        method_lower = method.lower()
+
+        for key, value in response_cfg.items():
+            if isinstance(key, str) and key.lower() == method_lower and isinstance(value, dict):
+                return value
+
+        for key, value in response_cfg.items():
+            if isinstance(key, str) and key.lower() == "default" and isinstance(value, dict):
+                return value
+
+        if simple_keys.intersection(response_cfg.keys()):
+            return {
+                key: response_cfg[key]
+                for key in simple_keys
+                if key in response_cfg
+            }
+
+        return None
+
+    def _make_response_from_config(
+        self,
+        config: Optional[Dict[str, Any]],
+        default_status: int,
+    ) -> Any:
+        if config is None:
+            return self._make_flask_response("", default_status)
+
+        status_code = int(config.get("status_code", default_status))
+        body = config.get("body")
+        headers = config.get("headers")
+        content_type = config.get("content_type")
+        return self._make_flask_response(body, status_code, headers, content_type)
+
+    def _make_stored_response(
+        self,
+        stored: Dict[str, Any],
+        status_code: int,
+        headers: Optional[Dict[str, Any]] = None,
+    ) -> Any:
+        payload = stored.get("payload")
+        is_json = stored.get("is_json", False)
+        content_type = stored.get("content_type")
+
+        if is_json:
+            response = jsonify(payload)
+        else:
+            body = payload if payload is not None else ""
+            response = make_response(body)
+            if content_type:
+                response.headers["Content-Type"] = content_type
+
+        response.status_code = status_code
+
+        if headers and isinstance(headers, dict):
+            for key, value in headers.items():
+                response.headers[str(key)] = str(value)
+
+        return response
+
+    def _make_flask_response(
+        self,
+        body: Any,
+        status_code: int,
+        headers: Optional[Dict[str, Any]] = None,
+        content_type: Optional[str] = None,
+    ) -> Any:
+        if isinstance(body, (dict, list)):
+            response = jsonify(body)
+        elif isinstance(body, bytes):
+            response = make_response(body)
+        else:
+            response = make_response("" if body is None else str(body))
+
+        response.status_code = status_code
+
+        if content_type:
+            response.headers["Content-Type"] = content_type
+
+        if headers and isinstance(headers, dict):
+            for key, value in headers.items():
+                response.headers[str(key)] = str(value)
+
+        return response
+
+    def _extract_request_payload(self) -> Tuple[Any, bool, Optional[str]]:
+        if request.is_json:
+            payload = request.get_json(silent=True)
+            return payload, True, "application/json"
+
+        data = request.get_data()
+        if not data:
+            return "", False, request.mimetype
+
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            return data, False, request.mimetype
+
+        try:
+            parsed = json.loads(text)
+            return parsed, True, "application/json"
+        except json.JSONDecodeError:
+            return text, False, request.mimetype or "text/plain"
+
+    def _store_custom_route_value(
+        self,
+        key: str,
+        payload: Any,
+        is_json: bool,
+        content_type: Optional[str],
+    ) -> None:
+        with self._custom_route_lock:
+            self._custom_route_storage[key] = {
+                "payload": payload,
+                "is_json": is_json,
+                "content_type": content_type,
+            }
+
+    def _get_custom_route_value(self, key: str) -> Optional[Dict[str, Any]]:
+        with self._custom_route_lock:
+            stored = self._custom_route_storage.get(key)
+            return dict(stored) if stored is not None else None
+
+    def _remove_custom_route_value(self, key: str) -> None:
+        with self._custom_route_lock:
+            self._custom_route_storage.pop(key, None)
 
     def _sensor_to_dict(self, sensor: Sensor) -> Dict[str, Any]:
         if sensor is self._aggregate_sensor:
@@ -378,11 +682,11 @@ class SimulationBridgeRestProtocol(Protocol):
                             break
                         if not line.strip():
                             continue
-                        self._handle_result_line(line)
+                        await self._handle_result_line(line)
             except httpx.HTTPError as exc:
                 print(f"HTTP error contacting simulation bridge at {url}: {exc}")
 
-    def _handle_result_line(self, line: str) -> None:
+    async def _handle_result_line(self, line: str) -> None:
         try:
             parsed = yaml.safe_load(line)
         except yaml.YAMLError:
@@ -402,6 +706,8 @@ class SimulationBridgeRestProtocol(Protocol):
         with self._sensor_lock:
             sensor.last_value = data_payload
             sensor.last_update_time = 0
+
+        await self._dispatch_routes(data_payload)
 
     def _build_token(self) -> str:
         algorithm = self.client_config.get("algorithm", "HS256")
@@ -423,6 +729,86 @@ class SimulationBridgeRestProtocol(Protocol):
         }
 
         return jwt.encode(payload, secret, algorithm=algorithm)
+
+    async def _dispatch_routes(self, data_payload: Any) -> None:
+        router = getattr(self, "_router", None)
+        if router is None or not router.has_routes:
+            return
+
+        messages = [message for message in router.dispatch(data_payload) if message.url]
+        if not messages:
+            return
+
+        timeout_value = float(self.client_config.get("dispatch_timeout", 30))
+        timeout = httpx.Timeout(timeout_value)
+
+        async with httpx.AsyncClient(timeout=timeout, verify=self.client_config.get("ssl_verify", False)) as client:
+            for message in messages:
+                method = (message.method or "POST").upper()
+                headers = {}
+                if message.headers:
+                    headers.update({str(key): str(value) for key, value in message.headers.items()})
+                content_type = message.content_type or "application/json"
+                if not any(key.lower() == "content-type" for key in headers):
+                    headers["Content-Type"] = content_type
+
+                target_url = message.url
+                if not target_url:
+                    continue
+                parsed = urlparse(target_url)
+                if not parsed.scheme:
+                    base_url = self._dispatch_base_url
+                    if not base_url:
+                        print(
+                            f"Failed to dispatch routed HTTP message: relative URL {target_url}"
+                            " and no dispatch_base_url configured"
+                        )
+                        continue
+                    target_url = urljoin(f"{base_url}/", target_url.lstrip("/"))
+
+                try:
+                    await client.request(
+                        method,
+                        target_url,
+                        headers=headers,
+                        content=message.payload,
+                    )
+                except httpx.HTTPError as exc:  # pragma: no cover - network error path
+                    print(f"Failed to dispatch routed HTTP message to {target_url}: {exc}")
+
+    def _build_router(self) -> ResultRouter:
+        routes_config = self._load_routes_config()
+        return ResultRouter(routes_config)
+
+    def _load_routes_config(self) -> Optional[List[Dict[str, Any]]]:
+        combined: List[Dict[str, Any]] = []
+        inline_value = self.config.get("routes")
+        if inline_value is not None:
+            if isinstance(inline_value, str):
+                inline_value = self._load_routes_file(inline_value)
+            try:
+                inline_routes = normalise_routes_config(inline_value)
+            except ValueError as exc:  # pragma: no cover - configuration error path
+                raise InvalidConfigurationError(["config.routes"]) from exc
+            if inline_routes:
+                combined.extend(inline_routes)
+
+        routes_file_value = self.config.get("routes_file")
+        if routes_file_value is not None:
+            file_data = self._load_routes_file(routes_file_value)
+            try:
+                file_routes = normalise_routes_config(file_data)
+            except ValueError as exc:  # pragma: no cover - configuration error path
+                raise InvalidConfigurationError(["config.routes_file"]) from exc
+            if file_routes:
+                combined.extend(file_routes)
+
+        return combined or None
+
+    def _load_routes_file(self, path_value: str) -> Any:
+        path = self._resolve_path(path_value)
+        with path.open("r", encoding="utf-8") as handle:
+            return yaml.safe_load(handle) or []
 
     def _resolve_path(self, relative_path: str) -> Path:
         path = Path(relative_path).expanduser()

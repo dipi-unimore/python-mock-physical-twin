@@ -7,7 +7,7 @@ import ssl
 import threading
 from pathlib import Path
 from types import MethodType
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from uuid import uuid4
 
 import paho.mqtt.client as mqtt
@@ -19,6 +19,7 @@ from app.protocol.protocol import (
     Protocol,
     validate_dict_keys,
 )
+from app.utils.result_router import ResultRouter, normalise_routes_config
 from app.utils.emulator_utils import ProtocolType
 
 if TYPE_CHECKING:
@@ -61,6 +62,8 @@ class SimulationBridgeMqttProtocol(Protocol):
             raise InvalidConfigurationError(["client_config"])
 
         self.simulation_payload = self._load_yaml(self.simulation_api_path)
+
+        self._router = self._build_router()
 
         self._validate_client_config(self.client_config)
         mqtt_cfg = self.client_config["mqtt"]
@@ -211,6 +214,8 @@ class SimulationBridgeMqttProtocol(Protocol):
             sensor.last_value = data_payload
             sensor.last_update_time = 0
 
+        self._dispatch_routes(data_payload)
+
     def _publish_simulation_request(self) -> None:
         client = self.client
         if client is None:
@@ -222,6 +227,69 @@ class SimulationBridgeMqttProtocol(Protocol):
             payload = yaml.dump(self.simulation_payload, default_flow_style=False)
 
         client.publish(self._input_topic, payload, qos=self._qos)
+
+    def _dispatch_routes(self, data_payload: Any) -> None:
+        if not getattr(self, "_router", None):
+            return
+        client = self.client
+        if client is None:
+            return
+
+        for message in self._router.dispatch(data_payload):
+            topic = message.topic
+            if not topic:
+                continue
+            qos = self._coerce_qos(message.qos)
+            retain = bool(message.retain) if message.retain is not None else False
+            try:
+                client.publish(topic, message.payload, qos=qos, retain=retain)
+            except Exception as exc:  # pylint: disable=broad-except
+                print(f"Failed to publish routed MQTT message to {topic}: {exc}")
+
+    def _coerce_qos(self, value: Optional[int]) -> int:
+        try:
+            qos = int(value) if value is not None else self._qos
+        except (TypeError, ValueError):
+            qos = self._qos
+        if qos < 0:
+            return 0
+        if qos > 2:
+            return 2
+        return qos
+
+    def _build_router(self) -> ResultRouter:
+        routes_config = self._load_routes_config()
+        return ResultRouter(routes_config)
+
+    def _load_routes_config(self) -> Optional[List[Dict[str, Any]]]:
+        combined: List[Dict[str, Any]] = []
+        inline_value = self.config.get("routes")
+        if inline_value is not None:
+            if isinstance(inline_value, str):
+                inline_value = self._load_routes_file(inline_value)
+            try:
+                inline_routes = normalise_routes_config(inline_value)
+            except ValueError as exc:  # pragma: no cover - configuration error path
+                raise InvalidConfigurationError(["config.routes"]) from exc
+            if inline_routes:
+                combined.extend(inline_routes)
+
+        routes_file_value = self.config.get("routes_file")
+        if routes_file_value is not None:
+            file_data = self._load_routes_file(routes_file_value)
+            try:
+                file_routes = normalise_routes_config(file_data)
+            except ValueError as exc:  # pragma: no cover - configuration error path
+                raise InvalidConfigurationError(["config.routes_file"]) from exc
+            if file_routes:
+                combined.extend(file_routes)
+
+        return combined or None
+
+    def _load_routes_file(self, path_value: str) -> Any:
+        path = self._resolve_path(path_value)
+        with path.open("r", encoding="utf-8") as handle:
+            return yaml.safe_load(handle) or []
 
     def _ensure_aggregate_sensor(self) -> Optional[Sensor]:
         with self._sensor_lock:

@@ -2,7 +2,7 @@ protocols:
   - id: "simulationBridge"
     type: "simulation_bridge_rest"
     config:
-      server_port: 5556
+      server_port: 9001
       client_config:
         url: "https://127.0.0.1:5000/message"
         secret: "CHANGE_ME_TO_A_LONG_RANDOM_VALUE"
@@ -18,6 +18,52 @@ protocols:
         sensor_config:
           type: "string"
           update_time_ms: 1000
+      routes:
+        - when:
+            type: "all"
+          publish:
+            url: "http://localhost:9001/sim/data"
+            method: "post"
+            payload: "{raw}"
+        - when:
+            type: "json_path"
+            path: "agents"
+            foreach: true
+          publish:
+            url: "http://localhost:9001/sim/agents/{index}"
+            method: "post"
+            payload:
+              x: "{0}"
+              y: "{1}"
+        - when:
+            type: "json_path"
+            path: "distance"
+          publish:
+            url: "http://localhost:9001/sim/distance"
+            method: "post"
+            payload: "{value}"
+        - when:
+            type: "json_path"
+            path: "step"
+          publish:
+            url: "http://localhost:9001/sim/step"
+            method: "post"
+            payload: "{value}"
+      server_routes:
+        defaults: false
+        routes:
+          - path: "/sim/data"
+            methods: ["GET", "POST"]
+            store_last: true
+          - path: "/sim/agents/<int:index>"
+            methods: ["GET", "POST"]
+            store_last: true
+          - path: "/sim/distance"
+            methods: ["GET", "POST"]
+            store_last: true
+          - path: "/sim/step"
+            methods: ["GET", "POST"]
+            store_last: true
 devices:
   - id: "device1"
     protocol_id: "simulationBridge"
