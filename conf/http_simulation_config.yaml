@@ -1,0 +1,90 @@
+# =========================
+# PROTOCOLS (PUBBLICAZIONE)
+# =========================
+protocols:
+  - id: "httpProtocol"
+    type: "http"
+    config:
+      server_port: 5555
+      # [COME OGGI] Qui definisci SOLO "come" PUBBLICHI i valori (HTTP/MQTT ecc.).
+      # Non riguarda il Simulation Bridge: quello è la FONTE dei dati, non il canale di pubblicazione.
+
+# ================================
+# DATA PROVIDERS (FONTE SIMULAZIONI)
+# ================================
+data_providers:
+  - id: "simBridge1"
+    type: "simulation_bridge" # [NOVITÀ] Dichiara un provider di dati di tipo "simulation_bridge".
+    protocol_config: "../sb-conf/mqtt_use.yaml"
+    # [NOVITÀ] Non inseriamo più qui dentro host/port/exchange ecc.:
+    #          si punta a un file esterno che contiene la config del trasporto (es. AMQP/MQTT per parlare col bridge).
+    #          Vantaggi: file principale più pulito, riuso della stessa config su più device.
+
+    payload_config: "../sb-conf/simulation.yaml"
+    # [NOVITÀ] Anche il payload della richiesta di simulazione è esterno (file YAML/JSON template).
+    #          In quel file puoi usare templating (es. {{ device.id }}) se serve personalizzare per ogni device.
+
+# =========================
+# DEVICES
+# =========================
+devices:
+  - id: "device1"
+    protocol_id: "httpProtocol" # [COME OGGI] Quale protocollo di PUBBLICAZIONE usa il device.
+
+    simulation_bridge:
+      provider_id: "simBridge1" # [NOVITÀ] Modo CHIARO per dire: "questo device usa quel provider".
+      enabled: true # [NOVITÀ] Abilita/Disabilita il bridge per questo device (default: true se presente).
+      # REGOLA: se questo blocco MANC A del tutto -> il device è 100% locale (comportamento attuale).
+
+    sensors:
+      # -------------------------------
+      # SENSORE ALIMENTATO DAL BRIDGE
+      # -------------------------------
+      - id: "distanceSensor"
+        type: "numeric" # [INVARIATO] Il TIPO indica il FORMATO pubblicato (numero/bool/string/json).
+        source:
+          "bridge" # [NOVITÀ] FONTE del dato:
+          #          - "bridge": valore preso dal JSON del Simulation Bridge
+          #          - "local" : generatore locale (random/fixed/csv ecc.)
+          # REGOLA: o bridge o local, MAI mix nello stesso sensore.
+
+        update_time_ms: 2000 # [INVARIATO] Frequenza di pubblicazione del sensore.
+        bridge_value: "data.distance"
+        # [NOVITÀ] Path (dot-notation) nel JSON unico restituito dal bridge.
+        #          Esempio: se il bridge risponde { "data": { "temperature": 21.3 } } -> pubblicherai 21.3
+        # REGOLA: quando source=bridge, NON mettere parametri dei generatori locali (min_val/max_val/value ecc.)
+
+      - id: "all_in_one"
+        type: "json" # [INVARIATO] Il TIPO indica il FORMATO pubblicato (numero/bool/string/json).
+        source: "bridge"
+        update_time_ms: 2000 # [INVARIATO] Frequenza di pubblicazione del sensore.
+        bridge_value: "data"
+
+      # --------------------------------
+      # SENSORE LOCALE (COMPORTAMENTO ATTUALE)
+      # --------------------------------
+      - id: "randomStringSensor"
+        type: "string"
+        source: "local" # [NOVITÀ] Esplicita che il dato è generato localmente (retro-compat: se omesso -> local).
+        update_time_ms: 2000
+        value_len: 10 # [COME OGGI] Parametri del generatore locale (permessi SOLO con source=local).
+        # Esempi altri parametri locali consentiti (a seconda del tipo):
+        # - numeric   : min_val, max_val, initial_value
+        # - boolean   : initial_value
+        # - string    : value (fixed), value_len (random)
+        # - csv       : csv_file, value_columns
+        # REGOLA: se source=bridge, questi parametri DEVONO mancare.
+
+    actuators:
+      - id: "demoActuator"
+        type: "string"
+        initial_value: "ON"
+        # [COME OGGI] Gli attuatori non cambiano: il bridge riguarda solo i sensori (letture).
+
+# ==============================================
+# ORCHESTRAZIONE / THREADING (INVARIATO)
+# ==============================================
+independent_communication: True
+device_update_delay_ms: 10
+# [COME OGGI] Questi campi governano come il device pubblica (thread per device vs ciclo centralizzato).
+#             Non sono legati al bridge. Il bridge fornisce i valori, poi PUBBLICHI come definito in 'protocols'.
