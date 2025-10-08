@@ -1,11 +1,14 @@
 protocols:
-  - id: "httpProtocol"
-    type: "http"
+  - id: "mqttProtocol"
+    type: "mqtt"
     config:
-      server_port: 5555 # The server port to be used for HTTP communication
+      broker_ip: "localhost"
+      broker_port: 1883
+      username: null
+      password: null
 devices:
   - id: "device1" # Unique identifier for the device
-    protocol_id: "httpProtocol" # Which publishing protocol the device uses (e.g., HTTP)
+    protocol_id: "mqttProtocol" # Which publishing protocol the device uses (e.g., HTTP)
 
     simulation_bridge:
       provider_id: "simBridge1" # Explicitly indicates that this device uses the specified provider for the simulation.

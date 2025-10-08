@@ -5,6 +5,7 @@ import os
 import ssl
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Sequence, TYPE_CHECKING
+from datetime import datetime
 
 import yaml
 import jinja2
@@ -30,7 +31,8 @@ class SimulationBridgeMqtt(Provider):
     This provider interacts with an external Simulation Bridge service to fetch 
     simulated data for registered IoT devices.
     The provider uses the Paho MQTT client to connect to the Simulation Bridge, 
-    send simulation requests, and receive responses.
+    send simulation requests, and receive responses. Every response is parsed and
+    used to update the sensors of the registered devices that rely on the Simulation Bridge.
     """
 
     MQTT_SECTION = "mqtt"
@@ -295,7 +297,7 @@ class SimulationBridgeMqtt(Provider):
         qos = self._mqtt_settings.get("qos", self.DEFAULT_QOS)
         if output_topic:
             client.subscribe(output_topic, qos=qos)
-            print(f"SB-Subscribed to Simulation Bridge topic '{output_topic}' (qos={qos}).")
+            # print(f"SB-Subscribed to Simulation Bridge topic '{output_topic}' (qos={qos}).")
 
         # Trigger an initial simulation request for all registered devices
         self._trigger_simulation_request()
@@ -328,6 +330,7 @@ class SimulationBridgeMqtt(Provider):
 
         for entry in target_devices:
             payload_dict = self._load_payload(entry.device)
+            payload_dict = convert_datetime_in_payload(payload_dict)
             payload = json.dumps(payload_dict)
             print(f"SB-Publishing simulation request for '{entry.device.id}' to '{input_topic}'")
             self._mqtt_client.publish(input_topic, payload, qos=qos)
@@ -481,3 +484,17 @@ class SimulationBridgeMqtt(Provider):
 
         # For other sensor types keep the original value.
         return value
+
+def convert_datetime_in_payload(payload):
+    if isinstance(payload, dict):
+        # If the payload is a dictionary, recursively convert datetime values
+        for key, value in payload.items():
+            payload[key] = convert_datetime_in_payload(value)
+    elif isinstance(payload, list):
+        # If the payload is a list, recursively convert datetime values
+        for index in range(len(payload)):
+            payload[index] = convert_datetime_in_payload(payload[index])
+    elif isinstance(payload, datetime):
+        # If you find a datetime object, convert it to ISO 8601 string
+        return payload.isoformat()
+    return payload
