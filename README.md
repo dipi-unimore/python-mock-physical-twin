@@ -4,7 +4,7 @@ This project is an IoT Device Emulator designed to simulate virtual devices equi
 
 Device behavior and communication settings are defined through flexible YAML configuration files, allowing quick setup of complex scenarios.
 
-The emulator can also integrate seamlessly with the **[Simulation Bridge](https://github.com/INTO-CPS-Association/simulation-bridge)**, enabling sensors to stream simulation-driven data derived from distributed co-simulation environments.
+The emulator can also integrate seamlessly with the **[Simulation Bridge](https://github.com/INTO-CPS-Association/simulation-bridge)**, enabling sensors to stream simulation-driven data derived from distributed simulation environments.
 
 ## Quick Start
 
