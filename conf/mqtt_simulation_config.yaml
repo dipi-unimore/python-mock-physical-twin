@@ -9,17 +9,12 @@ protocols:
 devices:
   - id: "device1" # Unique identifier for the device
     protocol_id: "mqttProtocol" # Which publishing protocol the device uses (e.g., HTTP)
-
-    simulation_bridge:
-      provider_id: "simBridge1" # Explicitly indicates that this device uses the specified provider for the simulation.
-      enabled: true # Enables or disables the simulation bridge for this device (default is true if present).
-      # RULE: If this block is MISSING entirely, the device is considered 100% local.
-
     sensors:
       # SENSOR POWERED BY THE SIMULATION BRIDGE
       - id: "distanceSensor" # Unique identifier for the sensor
         type: "numeric" # The data type of the sensor (numeric, boolean, string, json, etc.)
         source: "bridge" # Indicates that the sensor data comes from the Simulation Bridge
+        source_id: "simBridge1" # Reference to the provider feeding this sensor
         update_time_ms: 500 # The frequency at which the sensor publishes its value (in milliseconds)
         bridge_value: "data.distance" # The path in the JSON returned by the bridge to extract the sensor value
         # [NOTE] When source=bridge, do not specify local generator parameters (e.g., min_val, max_val, value).
@@ -27,6 +22,7 @@ devices:
       - id: "all_in_one"
         type: "json"
         source: "bridge"
+        source_id: "simBridge1"
         update_time_ms: 1000
         bridge_value: "data"
 
@@ -45,10 +41,10 @@ devices:
 
 data_providers:
   # Defines the data provider used for simulation (Simulation Bridge).
-  - id: "simBridge1" # Unique identifier for the simulation data provider
+  - source_id: "simBridge1" # Unique identifier for the simulation data provider
     type: "simulation_bridge" # The type of data provider (Simulation Bridge)
     protocol_config: "../sb-conf/mqtt_use.yaml" # Path to external configuration for transport protocol
-    payload_config: "../sb-conf/simulation.yaml" # Path to external configuration for simulation payloadå
+    payload_config: "../sb-conf/simulation.yaml" # Path to external configuration for simulation payload
 
 independent_communication: True
 device_update_delay_ms: 10

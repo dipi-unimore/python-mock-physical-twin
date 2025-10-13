@@ -17,11 +17,11 @@ devices:
       - id: "sensor_accel"
         type: "numeric"
         update_time_ms: 1000
-        csv_file: "test/accelerometer_data_seconds.csv"
+        csv_file: "../test/data/accelerometer_data_seconds.csv"
         value_columns: ["accel_x", "accel_y", "accel_z"]
     actuators:
       - id: "demoActuator"
         type: "string"
         initial_value: "ON"
 independent_communication: True
-device_update_delay_ms: 1000  # Update every 10 seconds if independent_communication is False
+device_update_delay_ms: 1000 # Update every 10 seconds if independent_communication is False
