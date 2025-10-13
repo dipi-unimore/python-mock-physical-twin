@@ -84,25 +84,42 @@ class SimulationBridgeMqtt(Provider):
         self._mqtt_client = None
         self._mqtt_connected = False
 
-    def register_device(self, device: "IoTDevice"):
+    def register_device(self, device: "IoTDevice", sensors: Optional[Sequence["Sensor"]] = None):
         """
         Register an IoT device whose bridge-backed sensors should be updated.
         """
         bridge_sensors: List["Sensor"] = []
+        candidates: Sequence["Sensor"] = sensors if sensors is not None else getattr(device, "sensors", ())
+
         # Identify sensors that rely on the Simulation Bridge as their data source
-        for sensor in getattr(device, "sensors", []):
+        for sensor in candidates:
             source = getattr(sensor, "source", "local")
-            if isinstance(source, str) and source.lower() == "bridge":
-                bridge_sensors.append(sensor)
+            if not (isinstance(source, str) and source.lower() == "bridge"):
+                continue
+
+            sensor_source_id = getattr(sensor, "source_id", None)
+            if sensor_source_id and sensor_source_id != self.id:
+                continue
+
+            bridge_sensors.append(sensor)
 
         # Skip devices without any bridge-backed sensors
         if not bridge_sensors:
-            print(f"SB-Device {device.id} has no bridge-backed sensors; skipping registration.")
+            print(f"SB-Device {device.id} has no bridge-backed sensors for provider '{self.id}'; skipping registration.")
             return
 
+        existing_entry = self._devices.get(device.id)
+        if existing_entry:
+            merged = {sensor.id: sensor for sensor in existing_entry.sensors}
+            for sensor in bridge_sensors:
+                merged[sensor.id] = sensor
+            registered_sensors = tuple(merged.values())
+        else:
+            registered_sensors = tuple(bridge_sensors)
+
         # Register the device and its bridge sensors
-        self._devices[device.id] = _RegisteredDevice(device=device, sensors=tuple(bridge_sensors))
-        print(f"SB-Registered device '{device.id}' with {len(bridge_sensors)} simulation-bridge sensors.")
+        self._devices[device.id] = _RegisteredDevice(device=device, sensors=registered_sensors)
+        print(f"SB-Registered device '{device.id}' with {len(registered_sensors)} simulation-bridge sensors (provider '{self.id}').")
 
         if self._mqtt_connected:
             self._trigger_simulation_request([device.id])

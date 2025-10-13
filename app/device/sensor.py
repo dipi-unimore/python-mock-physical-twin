@@ -125,6 +125,7 @@ class Sensor:
                  initial_value=None,
                  source='local',
                  bridge_value=None,
+                 source_id=None,
                  min_val=None,
                  max_val=None,
                  csv_file=None,
@@ -143,6 +144,8 @@ class Sensor:
         :param initial_value: Optional. Initial value of the sensor.
         :param source: Optional. Source for sensor data ('local' or 'bridge'), defaults to 'local'.
         :param bridge_value: Optional. JSON path (dot notation) for bridge sourced data.
+        :param source_id: Optional. Identifier of the data provider (bridge) to which the sensor is linked.
+                        Used only if source='bridge'.
         :param min_val: Optional. Minimum value for numeric sensors.
         :param max_val: Optional. Maximum value for numeric sensors.
         :param csv_file: Optional. Path to CSV file for simulated sensor data.
@@ -153,7 +156,6 @@ class Sensor:
         :param value: Optional. Fixed value for sensors with fixed string type.
         :param timestamp_unit: Optional. Unit of timestamps (default: 'millisec').
         """
-
         self.id = id
         self.type = type
         self.update_time_ms = update_time_ms
@@ -166,6 +168,7 @@ class Sensor:
         self.use_csv_timestamp = use_csv_timestamp
         self.timestamp_column = timestamp_column
         self.timestamp_unit = timestamp_unit
+        self.source_id = source_id
         self.last_update_time = time.time() * 1000  # Convert to milliseconds
         self.last_value = initial_value
         self.csv_reader = None
@@ -282,6 +285,7 @@ class Sensor:
         return {
             "id": self.id,
             "source": self.source,
+            "source_id": self.source_id,
             "bridge_value": self.bridge_value,
             "value": self.last_value,
             "last_update_time_ms": int(self.last_update_time)

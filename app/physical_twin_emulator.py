@@ -44,7 +44,7 @@ from app.device.actuator import Actuator
 from app.device.iot_device import IoTDevice
 from app.protocol.http_protocol import HttpProtocol
 from app.protocol.mqtt_protocol import MqttProtocol
-from app.utils.emulator_utils import ProtocolType
+from app.utils.emulator_utils import ProtocolType, ProviderType
 from app.provider.simulation_bridge_mqtt import SimulationBridgeMqtt
 
 
@@ -81,15 +81,22 @@ def main(config_file):
     # Extract Supported and Configured Data Providers
     # Simulation Bridge has to know which protocol use to publish the data?
     for data_provider in config.get('data_providers', []):
-        # TODO: Support additional communication providers (e.g., HTTP, MQTT, AMQP) for interacting with the Simulation Bridge.
-        # Currently, only a single MQTT client is implemented.
-        if data_provider["type"] == ProtocolType.SIMULATION_PROVIDER_TYPE.value:
-            simulation_bridge = SimulationBridgeMqtt(provider_id=data_provider["id"],
-                                                 protocol_config=data_provider["protocol_config"],
-                                                 payload_config=data_provider["payload_config"])
-            provider_dict[data_provider["id"]] = simulation_bridge
+        provider_type = data_provider.get("type")
+        provider_key = data_provider.get("source_id")
+
+        if not provider_key:
+            print("Data Provider configuration missing 'source_id'; skipping entry.")
+            continue
+
+        if provider_type == ProviderType.SIMULATION_PROVIDER_TYPE.value:
+            # TODO: Support additional communication providers (e.g., HTTP, MQTT, AMQP) for interacting with the Simulation Bridge.
+            # Currently, only a single MQTT client is implemented.
+            simulation_bridge = SimulationBridgeMqtt(provider_id=provider_key,
+                                                     protocol_config=data_provider.get("protocol_config"),
+                                                     payload_config=data_provider.get("payload_config"))
+            provider_dict[provider_key] = simulation_bridge
         else:
-            print(f'Data Provider Type not found ! Wrong Type: {data_provider["type"]}')
+            print(f'Data Provider Type not found ! Wrong Type: {provider_type}')
 
     # Extract Supported and Configured Protocols
     for protocol_config in config['protocols']:
@@ -124,13 +131,25 @@ def main(config_file):
         device_dict[device.id] = device
 
         # Register Device and Sensors to Simulation Bridge (if configured)
-        simulation_cfg = device_config.get('simulation_bridge')
-        if simulation_cfg:
-            enabled = simulation_cfg.get('enabled', True)
-            provider_id = simulation_cfg.get('provider_id')
-            if enabled and provider_id in provider_dict:
-                provider_dict[provider_id].register_device(device)
-            elif enabled:
+        bridge_sensors_by_provider = {}
+        for sensor in sensors:
+            source = getattr(sensor, "source", "local")
+            if not (isinstance(source, str) and source.lower() == "bridge"):
+                continue
+
+            provider_id = getattr(sensor, "source_id", None)
+
+            if not provider_id:
+                print(f"Bridge sensor '{sensor.id}' in device '{device.id}' missing 'source_id'; skipping provider registration.")
+                continue
+
+            bridge_sensors_by_provider.setdefault(provider_id, []).append(sensor)
+
+        for provider_id, bridge_sensors in bridge_sensors_by_provider.items():
+            provider = provider_dict.get(provider_id)
+            if provider:
+                provider.register_device(device, bridge_sensors)
+            else:
                 print(f"Simulation Bridge provider '{provider_id}' not found for device '{device.id}'.")
 
     # Start Protocols
