@@ -160,7 +160,13 @@ class Sensor:
         self.type = type
         self.update_time_ms = update_time_ms
         self.source = source
+        self.source_id = source_id
         self.bridge_value = bridge_value
+        if source == 'bridge':
+            if not bridge_value:
+                raise ValueError(f"Sensor '{id}': 'bridge_value' must be provided when source='bridge'.")
+            if not source_id:
+                raise ValueError(f"Sensor '{id}': 'source_id' must be provided when source='bridge'.")
         self.min_val = min_val
         self.max_val = max_val
         self.csv_file = csv_file
@@ -168,7 +174,6 @@ class Sensor:
         self.use_csv_timestamp = use_csv_timestamp
         self.timestamp_column = timestamp_column
         self.timestamp_unit = timestamp_unit
-        self.source_id = source_id
         self.last_update_time = time.time() * 1000  # Convert to milliseconds
         self.last_value = initial_value
         self.csv_reader = None
