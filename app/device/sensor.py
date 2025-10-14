@@ -82,6 +82,7 @@ class Sensor:
         type (str): Type of the sensor (e.g., numeric, boolean, string).
         update_time_ms (int): Time interval in milliseconds between sensor updates.
         initial_value (optional): Initial value of the sensor (default: None).
+        source (str): Source of the sensor value ('local' or 'bridge').
         min_val (optional): Minimum value for numeric sensors (default: None).
         max_val (optional): Maximum value for numeric sensors (default: None).
         csv_file (str or None): Path to a CSV file for simulated sensor data (default: None).
@@ -122,6 +123,9 @@ class Sensor:
                  type,
                  update_time_ms,
                  initial_value=None,
+                 source='local',
+                 bridge_value=None,
+                 source_id=None,
                  min_val=None,
                  max_val=None,
                  csv_file=None,
@@ -138,6 +142,10 @@ class Sensor:
         :param type: Type of the sensor (numeric, boolean, fixed string, random string).
         :param update_time_ms: Time interval in milliseconds between sensor updates.
         :param initial_value: Optional. Initial value of the sensor.
+        :param source: Optional. Source for sensor data ('local' or 'bridge'), defaults to 'local'.
+        :param bridge_value: Optional. JSON path (dot notation) for bridge sourced data.
+        :param source_id: Optional. Identifier of the data provider (bridge) to which the sensor is linked.
+                        Used only if source='bridge'.
         :param min_val: Optional. Minimum value for numeric sensors.
         :param max_val: Optional. Maximum value for numeric sensors.
         :param csv_file: Optional. Path to CSV file for simulated sensor data.
@@ -148,10 +156,17 @@ class Sensor:
         :param value: Optional. Fixed value for sensors with fixed string type.
         :param timestamp_unit: Optional. Unit of timestamps (default: 'millisec').
         """
-
         self.id = id
         self.type = type
         self.update_time_ms = update_time_ms
+        self.source = source
+        self.source_id = source_id
+        self.bridge_value = bridge_value
+        if source == 'bridge':
+            if not bridge_value:
+                raise ValueError(f"Sensor '{id}': 'bridge_value' must be provided when source='bridge'.")
+            if not source_id:
+                raise ValueError(f"Sensor '{id}': 'source_id' must be provided when source='bridge'.")
         self.min_val = min_val
         self.max_val = max_val
         self.csv_file = csv_file
@@ -164,6 +179,7 @@ class Sensor:
         self.csv_reader = None
         self.value = value
         self.value_len = value_len
+        self._bridge_pending_value = initial_value if source == 'bridge' else None
         if csv_file and value_columns:
             self.csv_reader = CSVReader(csv_file, value_columns, timestamp_column, timestamp_unit)
 
@@ -203,6 +219,13 @@ class Sensor:
 
         :return: Updated sensor value.
         """
+        if self.source == 'bridge':
+            # Values are injected externally by the simulation bridge; consume buffered data.
+            if self._bridge_pending_value is not None:
+                self.last_value = self._bridge_pending_value
+                self._bridge_pending_value = None
+            return self.last_value
+
         if self.csv_reader:
             value = self.csv_reader.get_next_values()
             if self.type == SensorType.SENSOR_NUMERIC_TYPE.value:
@@ -266,6 +289,15 @@ class Sensor:
         """
         return {
             "id": self.id,
+            "source": self.source,
+            "source_id": self.source_id,
+            "bridge_value": self.bridge_value,
             "value": self.last_value,
             "last_update_time_ms": int(self.last_update_time)
         }
+
+    def set_bridge_value(self, value):
+        """
+        Buffer the latest value received from the simulation bridge until the next scheduled update.
+        """
+        self._bridge_pending_value = value

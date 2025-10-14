@@ -40,10 +40,19 @@ class ProtocolType(Enum):
     Attributes:
         HTTP_PROTOCOL_TYPE (str): HTTP protocol type.
         MQTT_PROTOCOL_TYPE (str): MQTT protocol type.
+        SIMULATION_PROVIDER_TYPE (str): Simulation provider type.
     """
     HTTP_PROTOCOL_TYPE = "http"
     MQTT_PROTOCOL_TYPE = "mqtt"
 
+class ProviderType(Enum):
+    """
+    Enumeration defining types of data providers.
+
+    Attributes:
+        SIMULATION_PROVIDER_TYPE (str): Simulation provider type.
+    """
+    SIMULATION_PROVIDER_TYPE = "simulation_bridge"
 
 class TimeUnit(Enum):
     """

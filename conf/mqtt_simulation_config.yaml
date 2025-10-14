@@ -1,0 +1,50 @@
+protocols:
+  - id: "mqttProtocol"
+    type: "mqtt"
+    config:
+      broker_ip: "localhost"
+      broker_port: 1883
+      username: null
+      password: null
+devices:
+  - id: "device1" # Unique identifier for the device
+    protocol_id: "mqttProtocol" # Which publishing protocol the device uses (e.g., HTTP)
+    sensors:
+      # SENSOR POWERED BY THE SIMULATION BRIDGE
+      - id: "distanceSensor" # Unique identifier for the sensor
+        type: "numeric" # The data type of the sensor (numeric, boolean, string, json, etc.)
+        source: "bridge" # Indicates that the sensor data comes from the Simulation Bridge
+        source_id: "simBridge1" # Reference to the provider feeding this sensor
+        update_time_ms: 500 # The frequency at which the sensor publishes its value (in milliseconds)
+        bridge_value: "data.distance" # The path in the JSON returned by the bridge to extract the sensor value
+        # [NOTE] When source=bridge, do not specify local generator parameters (e.g., min_val, max_val, value).
+
+      - id: "all_in_one"
+        type: "json"
+        source: "bridge"
+        source_id: "simBridge1"
+        update_time_ms: 1000
+        bridge_value: "data"
+
+      # LOCAL SENSOR
+      - id: "randomStringSensor"
+        type: "random_string"
+        source: "local"
+        update_time_ms: 2000
+        value_len: 10
+        # [NOTE] Parameters like min_val/max_val for numeric or value_len for strings are only allowed when source=local.
+
+    actuators:
+      - id: "demoActuator"
+        type: "string"
+        initial_value: "ON"
+
+data_providers:
+  # Defines the data provider used for simulation (Simulation Bridge).
+  - source_id: "simBridge1" # Unique identifier for the simulation data provider
+    type: "simulation_bridge" # The type of data provider (Simulation Bridge)
+    protocol_config: "../sb-conf/mqtt_use.yaml" # Path to external configuration for transport protocol
+    payload_config: "../sb-conf/simulation.yaml" # Path to external configuration for simulation payload
+
+independent_communication: True
+device_update_delay_ms: 10
