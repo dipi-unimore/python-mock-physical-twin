@@ -1,4 +1,4 @@
-# IoT Device Emulator
+# Mock Physical Twin (MockPT): What is it
 
 This project is an IoT Device Emulator designed to simulate virtual devices equipped with various sensors and actuators, communicating over multiple protocols such as HTTP and MQTT.
 
