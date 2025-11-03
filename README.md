@@ -6,6 +6,9 @@ Device behavior and communication settings are defined through flexible YAML con
 
 The emulator can also integrate seamlessly with the **[Simulation Bridge](https://github.com/INTO-CPS-Association/simulation-bridge)**, enabling sensors to stream simulation-driven data derived from distributed simulation environments.
 
+## TODO
+Add **OPC-UA** protocol!!
+
 ## Quick Start
 
 1. **Install dependencies**
