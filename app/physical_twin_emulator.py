@@ -44,6 +44,7 @@ from app.device.actuator import Actuator
 from app.device.iot_device import IoTDevice
 from app.protocol.http_protocol import HttpProtocol
 from app.protocol.mqtt_protocol import MqttProtocol
+from app.protocol.opcua_protocol import OpcUaProtocol
 from app.utils.emulator_utils import ProtocolType, ProviderType
 from app.provider.simulation_bridge_mqtt import SimulationBridgeMqtt
 
@@ -108,6 +109,11 @@ def main(config_file):
         # MQTT Protocol Support
         elif protocol_config["type"] == ProtocolType.MQTT_PROTOCOL_TYPE.value:
             protocol = MqttProtocol(protocol_id=protocol_config["id"],
+                                        config=protocol_config["config"])
+            protocol_dict[protocol.id] = protocol
+        # OPC UA Protocol Support
+        elif protocol_config["type"] == ProtocolType.OPCUA_PROTOCOL_TYPE.value:
+            protocol = OpcUaProtocol(protocol_id=protocol_config["id"],
                                         config=protocol_config["config"])
             protocol_dict[protocol.id] = protocol
         else:

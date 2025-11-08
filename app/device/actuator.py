@@ -22,7 +22,7 @@ class Actuator:
             Converts the Actuator instance to a dictionary containing its attributes.
     """
 
-    def __init__(self, id, type, initial_value=None):
+    def __init__(self, id, type, initial_value=None, node_id=None):
         """
         Initialize an Actuator object with an id, type, and optional initial_value.
 
@@ -33,6 +33,7 @@ class Actuator:
         """
         self.id = id
         self.type = type
+        self.node_id = node_id
         self.current_value = initial_value
         self.last_update_time = time.time() * 1000  # Convert to milliseconds
 
@@ -47,7 +48,7 @@ class Actuator:
         Returns:
             bool: True if the action was successfully handled, False otherwise.
         """
-        print(f'Actuator {self.id} handling Action: {request_type} with Payload: {request_payload}')
+        print(f'Actuator {self.id} at node {self.node_id} handling Action: {request_type} with Payload: {request_payload}')
         return True
 
     def to_dict(self):
@@ -59,6 +60,7 @@ class Actuator:
         """
         return {
             "id": self.id,
+            "node_id": self.node_id,
             "type": self.type,
             "current_value": self.current_value,
             "last_update_time": self.last_update_time

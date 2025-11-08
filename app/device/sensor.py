@@ -123,6 +123,7 @@ class Sensor:
                  type,
                  update_time_ms,
                  initial_value=None,
+                 node_id=None,
                  source='local',
                  bridge_value=None,
                  source_id=None,
@@ -160,6 +161,7 @@ class Sensor:
         self.type = type
         self.update_time_ms = update_time_ms
         self.source = source
+        self.node_id = node_id
         self.source_id = source_id
         self.bridge_value = bridge_value
         if source == 'bridge':
@@ -289,6 +291,7 @@ class Sensor:
         """
         return {
             "id": self.id,
+            "node_id": self.node_id,
             "source": self.source,
             "source_id": self.source_id,
             "bridge_value": self.bridge_value,

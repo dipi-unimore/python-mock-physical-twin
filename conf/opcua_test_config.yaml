@@ -1,14 +1,18 @@
 protocols:
-  - id: "mqttProtocol"
-    type: "mqtt"
+  - id: "opcuaProtocol"
+    type: "opcua"
     config:
-      broker_ip: "localhost"
-      broker_port: 1883
+      server_url: "opc.tcp://localhost:4840/freeopcua/server/"
+      server_name: "MockPhysicalTwin"
+      namespace: "http://examples.mockphysicaltwin.com"
+      security_mode: "None"
+      security_policy: "None"
       username: null
       password: null
+
 devices:
-  - id: "device1"
-    protocol_id: "mqttProtocol"
+  - id: "Device1"
+    protocol_id: "opcuaProtocol"
     sensors:
       - id: "numericSensor"
         type: "numeric"
@@ -16,26 +20,33 @@ devices:
         min_val: 0
         max_val: 100
         initial_value: 0
+        node_id: "ns=2;s=Device1.numericSensor"
       - id: "booleanSensor"
         type: "boolean"
         update_time_ms: 1000
         initial_value: false
+        node_id: "ns=2;s=Device1.booleanSensor"
       - id: "randomStringSensor"
         type: "random_string"
         value_len: 10
         update_time_ms: 3000
+        node_id: "ns=2;s=Device1.randomStringSensor"
       - id: "fixedStringSensor"
         type: "fixed_string"
         value: "test-fixed-string"
         update_time_ms: 5000
+        node_id: "ns=2;s=Device1.fixedStringSensor"
       - id: "sensor_accel"
         type: "numeric"
-        update_time_ms: 1000  # 1 second in milliseconds
+        update_time_ms: 1000
         csv_file: "test/data/accelerometer_data_seconds.csv"
         value_columns: ["accel_x", "accel_y", "accel_z"]
+        node_id: "ns=2;s=Device1.sensor_accel"
     actuators:
       - id: "demoActuator"
         type: "string"
         initial_value: "ON"
+        node_id: "ns=2;s=Device1.demoActuator"
+
 independent_communication: False
-device_update_delay_ms: 1000  # Update every 10 seconds if independent_communication is False
+device_update_delay_ms: 10000  # Update every 10 seconds if independent_communication is False

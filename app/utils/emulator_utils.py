@@ -44,6 +44,7 @@ class ProtocolType(Enum):
     """
     HTTP_PROTOCOL_TYPE = "http"
     MQTT_PROTOCOL_TYPE = "mqtt"
+    OPCUA_PROTOCOL_TYPE = "opcua"
 
 class ProviderType(Enum):
     """
