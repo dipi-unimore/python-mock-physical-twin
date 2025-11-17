@@ -1,0 +1,19 @@
+# Client configuration file for MQTT to OPC UA data processing experiment
+
+# MQTT Client Configuration
+is_mqtt_enabled: True
+mockpt_broker_ip: "192.168.0.115"
+mockpt_broker_port: 1883
+mockpt_target_topic_list:
+  - "device/MQTT_Device/telemetry"
+
+# OPC UA Client Configuration
+is_opcua_enabled: True
+opcua_server_url: "opc.tcp://192.168.0.115:4840/freeopcua/server/"
+opcua_node_ids:
+  - "ns=2;s=OPCUA_Device.sensor_accel"
+
+# Data Processing Configuration
+polling_interval: 2
+is_mqtt_forwarding_enabled: False
+mqtt_publish_topic: "processed/data"

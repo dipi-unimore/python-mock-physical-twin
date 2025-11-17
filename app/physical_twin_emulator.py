@@ -183,6 +183,7 @@ def main(config_file):
 
 
 if __name__ == "__main__":
+
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Run IoT devices using configuration from YAML file')
     parser.add_argument('-c', '--config', type=str, metavar='', required=True, help='Path to the YAML configuration file')

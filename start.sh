@@ -6,4 +6,4 @@
 docker run --name=physical_twin_emulator \
     -p 5555:5555 \
     --restart always \
-    -d registry.gitlab.com/piconem-university/projects/digital-twin/physical-twin-emulator:0.1
+    -d registry.gitlab.com/dt-trustworthiness/physical-twin-emulator:0.1

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 VERSION=$1
-REPOSITORY="registry.gitlab.com/dt-trustworthiness/physical-twin-emulator"
+REPOSITORY="registry.gitlab.com/dt-trustworthiness/physical-twin-emulator/mockpt-opcua-mqtt-client"
 
 if [[ ! "$VERSION" ]];
 	then

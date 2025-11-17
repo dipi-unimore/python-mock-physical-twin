@@ -1,0 +1,25 @@
+protocols:
+  - id: "mqttProtocol"
+    type: "mqtt"
+    config:
+      broker_ip: "192.168.0.115"
+      broker_port: 1883
+      username: null
+      password: null
+
+devices:
+  - id: "MQTT_Device"
+    protocol_id: "mqttProtocol"
+    sensors:
+      - id: "sensor_accel"
+        type: "numeric"
+        update_time_ms: 1000  # 1 second in milliseconds
+        csv_file: "/app/data/accelerometer_data_seconds.csv"
+        value_columns: [ "accel_x", "accel_y", "accel_z" ]
+    actuators:
+      - id: "demoActuator"
+        type: "string"
+        initial_value: "ON"
+
+independent_communication: False
+device_update_delay_ms: 1000  # Update every 10 seconds if independent_communication is False
