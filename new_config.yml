@@ -1,0 +1,68 @@
+destinations:
+  mqtt:
+    type: mqtt
+    broker_hostname: 192.168.0.42
+    broker_port: 1883
+
+  http:
+    type: http
+    base_url: http://localhost:8080
+    
+sources:
+
+  position:
+    type: csv
+    file: data/house1_sensors.csv
+    columns:    # specify which columns to read from the CSV and send to sensors
+      - latitude
+      - longitude
+    timestamp_column: timestamp
+
+  # if no columns are specified, all columns will be read and sent
+
+  house1_temperature:
+    type: csv
+    file: data/house1_sensors.csv
+    timestamp_column: timestamp   # used instead of `interval` for time-based data, it considers the time differences in the CSV
+
+  house1_humidity:
+    type: random_float
+    min: 10
+    max: 100
+    step: 0.1
+    interval: 1000
+
+  house1_heater:
+    type: protocol
+    protocol_id: mqtt
+    topic: house/1/heater
+
+devices:
+  smarthome1:
+    sensors:
+      latlong:
+        source: position
+        destinations:
+          mqtt:
+            topic: smarthome/1/latlong
+
+      temperature:
+        source: house1_temperature
+        interval: 2000  # Override source interval to 2 seconds (TBD)
+        # ^^^ buffering, mantiene l'ultimo valore e lo invia ogni 2 secondi
+        destinations:
+          mqtt:
+            topic: smarthome/1/temperature
+            
+      humidity:
+        source: house1_humidity
+        destinations:
+          http:
+            endpoint: sensors/humidity
+
+        # ok partire con JSON semplice, poi estendere con decisione developer
+    
+    actuators:
+      heater:   # NO => considerare come gestire in/out; inizialmente deve essere indipendente dai sensori, quindi senza stato. Ci può essere una funzione associata da chiamare quando arriva un comando
+        source: house1_heater
+        initial_value: "OFF"

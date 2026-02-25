@@ -1,4 +1,5 @@
-PyYAML==6.0
-paho-mqtt==1.6.1
-requests==2.31.0
-Flask==2.3.2
+PyYAML
+pydantic
+orbitalis
+scipy
+pandas

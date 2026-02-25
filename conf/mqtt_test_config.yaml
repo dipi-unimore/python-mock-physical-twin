@@ -2,7 +2,7 @@ protocols:
   - id: "mqttProtocol"
     type: "mqtt"
     config:
-      broker_ip: "192.168.1.106"
+      broker_ip: "127.0.0.1"
       broker_port: 1883
       username: null
       password: null
@@ -28,11 +28,11 @@ devices:
         type: "fixed_string"
         value: "test-fixed-string"
         update_time_ms: 5000
-      - id: "sensor_accel"
-        type: "numeric"
-        update_time_ms: 1000  # 1 second in milliseconds
-        csv_file: "test/accelerometer_data_seconds.csv"
-        value_columns: ["accel_x", "accel_y", "accel_z"]
+      # - id: "sensor_accel"
+      #   type: "numeric"
+      #   update_time_ms: 1000  # 1 second in milliseconds
+      #   csv_file: "test/accelerometer_data_seconds.csv"
+      #   value_columns: ["accel_x", "accel_y", "accel_z"]
     actuators:
       - id: "demoActuator"
         type: "string"
