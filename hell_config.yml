@@ -19,12 +19,12 @@ sources:
   foo2:
     type: random
     rv: uniform
-    interval: 1
+    interval: 10
 
   foo3:
     type: random
     rv: uniform
-    interval: 1
+    interval: 10
 
 devices:
   foo:

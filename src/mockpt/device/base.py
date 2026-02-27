@@ -17,16 +17,11 @@ from mockpt.common.data_message import DataMessage
 
 @dataclass(kw_only=True)
 class SourceState:
-    last_value: Optional[DataMessage] = None
-    value_updated: asyncio.Event = field(default_factory=asyncio.Event, init=False)
+    queue: asyncio.Queue[DataMessage] = field(default_factory=lambda: asyncio.Queue(maxsize=1), init=False)
     loop_task: Optional[asyncio.Task] = field(default=None, init=False)
     
     async def put(self, value: DataMessage):
-        while self.value_updated.is_set():
-            await asyncio.sleep(0)    # wait until the current value is processed and cleared by the loop
-        
-        self.last_value = value
-        self.value_updated.set()
+        await self.queue.put(value)
         
         
 
@@ -71,7 +66,6 @@ class Device(Core):
         source_identifier = config.source
         self._source_states[source_identifier] = state      # must be stored to be started later and to put new values when received
         
-        state.value_updated.clear()
         state.loop_task = asyncio.create_task(self._sensor_elaboration_loop(sensor_identifier, source_identifier))
         
     async def _on_stopping(self, *args, **kwargs):
@@ -98,27 +92,30 @@ class Device(Core):
 
     async def _sensor_elaboration_loop(self, sensor_identifier: str, source_identifier: str):
         source_state = self._source_states[source_identifier]
-        interval = self.config.sensors[sensor_identifier].interval
-        destinations = self.config.sensors[sensor_identifier].destinations
+        sensor_config = self.config.sensors[sensor_identifier]
+        interval = sensor_config.interval
+        destinations = sensor_config.destinations
         
-        if interval is not None:
-            await source_state.value_updated.wait()    # await only first value, then loop with fixed interval
+        last_processed_value = None
 
-            while True:
-                source_state.value_updated.clear()
+        while True:
+            if interval is not None:
+                # If an interval is specified, we want to send the last value at that interval, 
+                # so we check if there's a new value without waiting, and if there is we update the last value to send. 
+                # Then we wait for the specified interval before sending the last value 
+                # (which could be the same if no new value arrived, or a new one if it did).
+                try:
+                    last_processed_value = source_state.queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    pass
+                
+                if last_processed_value:
+                    await self._send_by_destinations(sensor_identifier, source_identifier, last_processed_value, destinations)
+                
                 await asyncio.sleep(interval)
-
-                assert source_state.last_value is not None, "Data must be provided"
-                await self._send_by_destinations(sensor_identifier, source_identifier, source_state.last_value, destinations)
-                
-        else:
-            while True:
-                
-                await source_state.value_updated.wait()
-                source_state.value_updated.clear()
-                
-                assert source_state.last_value is not None, "Data must be provided"
-                await self._send_by_destinations(sensor_identifier, source_identifier, source_state.last_value, destinations)
+            else:
+                msg = await source_state.queue.get()
+                await self._send_by_destinations(sensor_identifier, source_identifier, msg, destinations)
 
     
     def _wild_card_replace(self, endpoint: str, sensor_identifier: str, source_identifier: str) -> str:

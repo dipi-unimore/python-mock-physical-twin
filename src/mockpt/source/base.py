@@ -31,12 +31,13 @@ class SourceBase(Plugin, ABC):
     def source_identifier(self) -> str:
         return self.identifier
     
-    def __post_init__(self):
-        super().__post_init__()
-                        
+    def turn_on_datastream(self):
         self._stop_push_loop.clear()
         self._push_loop_task = asyncio.create_task(self._push_loop())
-
+        
+    def turn_off_datastream(self):
+        self._stop_push_loop.set()
+    
     @operation(
         name=OperationName.NEXT,
         input=Input.no_input(),

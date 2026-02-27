@@ -132,6 +132,7 @@ async def main(options: CliOptions):
     logger.info("Application started.")
     logger.debug(f"Loading config from: {options.config}")
     
+    # Load and parse the configuration file
     app_config = AppConfig.from_yaml_file(options.config)
     
     if app_config.wrap_needed():
@@ -205,6 +206,10 @@ async def main(options: CliOptions):
         await asyncio.sleep(0.1)
         
         assert len(device.remote_identifiers) == len(sources) + len(destinations), f"Device {device.identifier} should have discovered {len(sources) + len(destinations)} remote identifiers (sources + destinations), but discovered {len(device.remote_identifiers)}."
+    
+    # Turn on datastream for sources after all devices have started, to ensure that devices receive the first data from sources
+    for source in sources.values():
+        source.turn_on_datastream()
     
     while True:
         await asyncio.sleep(0)

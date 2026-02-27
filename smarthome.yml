@@ -1,0 +1,89 @@
+destinations:
+  mqtt:
+    type: mqtt
+    broker_hostname: localhost
+    broker_port: 1883
+
+  http:
+    type: http
+    base_url: http://localhost:8081
+    method: POST
+
+  local:
+    type: local
+    directory: ./output
+
+
+sources:
+  humidity:
+    type: csv
+    file: ./data/humidity.csv
+    timestamp_column: timestamp
+
+  temperature:
+    type: random
+    rv: uniform
+    min: 10
+    max: 100
+    step: 0.1
+    interval: 5
+
+  air_quality:
+    type: mqtt
+    topic: smarthome/air_quality
+    broker_hostname: localhost
+    broker_port: 1883
+
+  light_level:
+    type: http
+    path: /smarthome/light_level
+    method: POST
+    host: "0.0.0.0"
+    port: 8080
+
+devices:
+  smarthome:
+    vars:
+      room1: living_room
+      room2: bedroom
+
+    sensors:
+      temperature:
+        source: temperature
+        destinations:
+          mqtt:
+            endpoint: "{device}/{sensor}/{var:room1}/{source}"
+          http:
+            endpoint: smarthome/temperature
+          local:
+            endpoint: "{device}/{sensor}/{var:room1}/{source}.txt"
+            
+      humidity:
+        source: humidity
+        destinations:
+          mqtt:
+            endpoint: smarthome/humidity
+          http:
+            endpoint: smarthome/humidity
+          local:
+            endpoint: "{device}/{sensor}/{var:room2}/{source}.txt"
+
+      air_quality:
+        source: air_quality
+        destinations:
+          mqtt:
+            endpoint: "{device}/{source}"
+          http:
+            endpoint: smarthome/air_quality
+          local:
+            endpoint: "{device}/{source}.txt"
+
+      light_level:
+        source: light_level
+        destinations:
+          mqtt:
+            endpoint: "{device}/{source}"
+          http:
+            endpoint: smarthome/light_level
+          local:
+            endpoint: "{device}/{source}.txt"
