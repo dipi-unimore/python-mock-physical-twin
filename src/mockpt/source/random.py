@@ -45,7 +45,7 @@ class RandomSource(SourceBase):
             
         return valore
 
-    def _next(self):
+    async def _next(self):
 
         value = self._apply_modifiers(
             self.distribution.rvs(),

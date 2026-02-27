@@ -1,31 +1,26 @@
 from typing import Literal, Optional, List, Any, Dict
-from dataclasses import dataclass, field
 import aiomqtt
 from contextlib import AsyncExitStack
+from dataclasses import dataclass, field
 
-from mockpt.destination.enum import DestinationName 
-from mockpt.destination.base import DestinationBase, DestinationBaseConfig
-from mockpt.common.data_message import DataMessage
+from mockpt.source.base import SourceBase, SourceBaseConfig
 
 
-class MqttDestinationConfig(DestinationBaseConfig):
-    type: Literal[DestinationName.MQTT.value] = DestinationName.MQTT.value # type: ignore
+class MqttSourceConfig(SourceBaseConfig):
+    type: Literal["mqtt"] = "mqtt" # type: ignore
+    topic: str
     broker_hostname: str
     broker_port: int
     broker_username: Optional[str] = None
     broker_password: Optional[str] = None
-    qos: int = 2
 
 
 @dataclass
-class MqttDestination(DestinationBase):
-    config: MqttDestinationConfig # type: ignore
+class MqttSource(SourceBase):
+    config: MqttSourceConfig # type: ignore
     mqtt_client: aiomqtt.Client | None = None
     _exit_stack: AsyncExitStack = field(default_factory=AsyncExitStack, init=False)
-
-    def __post_init__(self):
-        super().__post_init__()
-
+    
     async def _on_starting(self, *args, **kwargs):
         await super()._on_starting(*args, **kwargs)
         
@@ -47,18 +42,7 @@ class MqttDestination(DestinationBase):
             
         await super()._on_stopping(*args, **kwargs)
 
-    async def _send(self, endpoint: str, data: DataMessage):
-        if self.mqtt_client is None:
-            raise RuntimeError("MQTT client is not connected.")
-        
-        await self.mqtt_client.publish(
-            topic=endpoint, 
-            payload=data.json_value,
-            qos=self.config.qos
-        )
 
+    # async def _next(self):
 
-
-
-
-
+    #     # TODO

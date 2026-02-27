@@ -1,18 +1,23 @@
 destinations:
   mqtt:
     type: mqtt
-    broker_hostname: 192.168.0.42
+    broker_hostname: localhost
     broker_port: 1883
 
-  http:
-    type: http
-    base_url: http://localhost:8080
+  # TODO:
+  # http:
+  #   type: http
+  #   base_url: http://localhost:8080
+
+  local:
+    type: local
+    directory: ./output
     
 sources:
 
   position:
     type: csv
-    file: data/house1_sensors.csv
+    file: ./data/latlong.csv
     columns:    # specify which columns to read from the CSV and send to sensors
       - latitude
       - longitude
@@ -20,49 +25,62 @@ sources:
 
   # if no columns are specified, all columns will be read and sent
 
-  house1_temperature:
+  house1_humidity:
     type: csv
-    file: data/house1_sensors.csv
+    file: ./data/humidity.csv
     timestamp_column: timestamp   # used instead of `interval` for time-based data, it considers the time differences in the CSV
 
-  house1_humidity:
-    type: random_float
+  house1_temperature:
+    type: random
+    rv: uniform
     min: 10
     max: 100
     step: 0.1
-    interval: 1000
+    interval: 5
 
-  house1_heater:
-    type: protocol
-    protocol_id: mqtt
-    topic: house/1/heater
+  # TODO:
+  # house1_heater:
+  #   type: mqtt
+  #   topic: house/1/heater
 
 devices:
   smarthome1:
+    vars:
+      room1: living_room
+      room2: bedroom
     sensors:
       latlong:
         source: position
         destinations:
           mqtt:
-            topic: smarthome/1/latlong
+            endpoint: smarthome1/latlong
+          local:
+            endpoint: "{device}/{sensor}/{var:room2}/{source}"
 
       temperature:
         source: house1_temperature
-        interval: 2000  # Override source interval to 2 seconds (TBD)
+        interval: 2  # Override source interval to 2 seconds (TBD)
         # ^^^ buffering, mantiene l'ultimo valore e lo invia ogni 2 secondi
         destinations:
           mqtt:
-            topic: smarthome/1/temperature
+            endpoint: "{device}/{sensor}/{var:room1}/{source}"
+          local:
+            endpoint: "{device}/{sensor}/{var:room1}/{source}"
             
       humidity:
         source: house1_humidity
         destinations:
+          mqtt:
+            endpoint: smarthome1/humidity
           http:
             endpoint: sensors/humidity
+          local:
+            endpoint: "{device}/{sensor}/{var:room2}/{source}"
 
-        # ok partire con JSON semplice, poi estendere con decisione developer
+        # TODO: ok partire con JSON semplice, poi estendere con decisione developer
     
-    actuators:
-      heater:   # NO => considerare come gestire in/out; inizialmente deve essere indipendente dai sensori, quindi senza stato. Ci può essere una funzione associata da chiamare quando arriva un comando
-        source: house1_heater
-        initial_value: "OFF"
+    # TODO:
+    # actuators:
+    #   heater:   # NO => considerare come gestire in/out; inizialmente deve essere indipendente dai sensori, quindi senza stato. Ci può essere una funzione associata da chiamare quando arriva un comando
+    #     source: house1_heater
+    #     initial_value: "OFF"

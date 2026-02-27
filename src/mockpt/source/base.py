@@ -28,7 +28,7 @@ class SourceBase(Plugin, ABC):
         return self.identifier
 
     @abstractmethod
-    def _next(self) -> Dict[str, Any]:
+    async def _next(self) -> Dict[str, Any]:
         pass
 
     @operation(
@@ -43,7 +43,7 @@ class SourceBase(Plugin, ABC):
     async def _on_loop_iteration(self):
         await super()._on_loop_iteration()
 
-        data = self._next()
+        data = await self._next()
 
         message = DataMessage.of(
             source_identifier=self.source_identifier,
