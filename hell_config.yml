@@ -1,0 +1,25 @@
+destinations:
+  foo:
+    type: local
+    directory: ./output
+    
+sources:
+  foo:
+    type: random
+    rv: uniform
+    interval: 1
+
+devices:
+  foo:
+    vars:
+      room1: living_room
+      room2: bedroom
+    sensors:
+      foo:
+        source: foo
+        interval: 2  # Override source interval to 2 seconds
+        # ^^^ buffering, mantiene l'ultimo valore e lo invia ogni 2 secondi
+        destinations:
+          foo:
+            endpoint: "{device}/{sensor}/{var:room1}/{source}"
+            

@@ -6,3 +6,4 @@ class SourceName(StrEnum):
     MQTT = "mqtt"
     CSV = "csv"
     RANDOM = "random"
+    HTTP = "http"

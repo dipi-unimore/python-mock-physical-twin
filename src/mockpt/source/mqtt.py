@@ -4,13 +4,14 @@ from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
 
 from mockpt.source.base import SourceBase, SourceBaseConfig
+from mockpt.source.enum import SourceName
 
 
 class MqttSourceConfig(SourceBaseConfig):
-    type: Literal["mqtt"] = "mqtt" # type: ignore
+    type: Literal[SourceName.MQTT.value] = SourceName.MQTT.value # type: ignore
     topic: str
-    broker_hostname: str
-    broker_port: int
+    broker_hostname: str = "localhost"
+    broker_port: int = 1883
     broker_username: Optional[str] = None
     broker_password: Optional[str] = None
 
@@ -18,8 +19,9 @@ class MqttSourceConfig(SourceBaseConfig):
 @dataclass
 class MqttSource(SourceBase):
     config: MqttSourceConfig # type: ignore
-    mqtt_client: aiomqtt.Client | None = None
+    mqtt_client: aiomqtt.Client = field(init=False)
     _exit_stack: AsyncExitStack = field(default_factory=AsyncExitStack, init=False)
+    
     
     async def _on_starting(self, *args, **kwargs):
         await super()._on_starting(*args, **kwargs)
@@ -34,15 +36,20 @@ class MqttSource(SourceBase):
         # Enter the aiomqtt context manager and keep the connection open
         self.mqtt_client = await self._exit_stack.enter_async_context(client)
         
+        await self.mqtt_client.subscribe(self.config.topic)
+        
     async def _on_stopping(self, *args, **kwargs):
         # Close the ExitStack, which will in turn close the connection to the broker cleanly
         if self._exit_stack:
             await self._exit_stack.aclose()
-            self.mqtt_client = None
+            self.mqtt_client = None # type: ignore
             
         await super()._on_stopping(*args, **kwargs)
 
 
-    # async def _next(self):
-
-    #     # TODO
+    async def _datastream(self):
+        async for message in self.mqtt_client.messages:
+            payload = message.payload.decode()
+            yield {
+                "value": payload
+            }

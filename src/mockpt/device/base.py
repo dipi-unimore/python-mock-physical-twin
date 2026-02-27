@@ -72,7 +72,11 @@ class Device(Core):
         operation_name=OperationName.NEXT
     )
     async def _next_event_handler(self, topic: str, event: Event[DataMessage]):
-        assert event.payload is not None, "Payload must be provided for next operation"    
+        assert event.payload is not None, "Payload must be provided for next operation"
+        if event.payload.source_identifier not in self._source_states:
+            logging.warning(f"Received data from unknown source '{event.payload.source_identifier}' for device '{self.identifier}'. Ignoring.")
+            return
+        
         self._source_states[event.payload.source_identifier].put(event.payload)
 
 

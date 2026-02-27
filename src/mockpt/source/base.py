@@ -1,7 +1,8 @@
-from typing import Optional, Dict, Any
+import asyncio
+from typing import AsyncGenerator, Optional, Dict, Any
 from pydantic import BaseModel, Field
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 from busline.event.event import Event
 from orbitalis.plugin.plugin import Plugin
@@ -22,14 +23,18 @@ class SourceBaseConfig(BaseModel):
 @dataclass
 class SourceBase(Plugin, ABC):
     config: SourceBaseConfig
+    _push_loop_task: asyncio.Task = field(init=False)
+    _stop_push_loop: asyncio.Event = field(default_factory=asyncio.Event, init=False)
 
     @property
     def source_identifier(self) -> str:
         return self.identifier
-
-    @abstractmethod
-    async def _next(self) -> Dict[str, Any]:
-        pass
+    
+    def __post_init__(self):
+        super().__post_init__()
+                        
+        self._stop_push_loop.clear()
+        self._push_loop_task = asyncio.create_task(self._push_loop())
 
     @operation(
         name=OperationName.NEXT,
@@ -40,32 +45,26 @@ class SourceBase(Plugin, ABC):
     async def next(self, topic: str, event: Event):
         pass    # nothing to do
 
-    async def _on_loop_iteration(self):
-        await super()._on_loop_iteration()
-
-        data = await self._next()
-
-        message = DataMessage.of(
-            source_identifier=self.source_identifier,
-            value=data
-        )
+    
+    async def _push(self, data_message: DataMessage):
 
         await self.eventbus_client.multi_publish(
             topics=[str(connections[OperationName.NEXT].output_topic) for connections in self._connections.values() if connections[OperationName.NEXT].has_output],
-            message=message
+            message=data_message
         )
 
-        # for connections in self._connections.values():
-        #     connection = connections["next"]
-
-        #     assert connection.has_output
-
-        #     await self.eventbus_client.publish(
-        #         topic=str(connection.output_topic),
-        #         message=message
-        #     )
-
-
+    
+    @abstractmethod
+    async def _datastream(self) -> AsyncGenerator[Dict[str, Any], None]:
+        yield {}    # dummy yield to make this an async generator, to be overridden by subclasses
+    
+    async def _push_loop(self):
+        while not self._stop_push_loop.is_set():
+            async for data in self._datastream():
+                await self._push(DataMessage.of(
+                    source_identifier=self.source_identifier,
+                    value=data
+                ))
     
 
 

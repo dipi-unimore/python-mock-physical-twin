@@ -1,3 +1,4 @@
+import logging
 from typing import Literal, Optional, List, Any, Dict
 from dataclasses import dataclass, field
 import aiomqtt
@@ -51,11 +52,14 @@ class MqttDestination(DestinationBase):
         if self.mqtt_client is None:
             raise RuntimeError("MQTT client is not connected.")
         
-        await self.mqtt_client.publish(
-            topic=endpoint, 
-            payload=data.json_value,
-            qos=self.config.qos
-        )
+        try:
+            await self.mqtt_client.publish(
+                topic=endpoint, 
+                payload=data.json_value,
+                qos=self.config.qos
+            )
+        except Exception as e:
+            logging.error(f"Failed to publish message to {endpoint}: {e}")
 
 
 

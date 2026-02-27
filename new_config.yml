@@ -4,10 +4,9 @@ destinations:
     broker_hostname: localhost
     broker_port: 1883
 
-  # TODO:
-  # http:
-  #   type: http
-  #   base_url: http://localhost:8080
+  http:
+    type: http
+    base_url: http://localhost:8081
 
   local:
     type: local
@@ -38,10 +37,17 @@ sources:
     step: 0.1
     interval: 5
 
-  # TODO:
-  # house1_heater:
-  #   type: mqtt
-  #   topic: house/1/heater
+  house1_heater:
+    type: mqtt
+    topic: smarthome1/heater
+    broker_hostname: localhost
+    broker_port: 1883
+
+  house1_light:
+    type: http
+    path: /smarthome1/light
+    method: POST
+    
 
 devices:
   smarthome1:
@@ -49,6 +55,24 @@ devices:
       room1: living_room
       room2: bedroom
     sensors:
+      light:
+        source: house1_light
+        destinations:
+          mqtt:
+            endpoint: smarthome1/light
+          http:
+            endpoint: sensors/light
+          local:
+            endpoint: "{device}/{sensor}/{var:room1}/{source}"
+
+      heater:
+        source: house1_heater
+        destinations:
+          mqtt:
+            endpoint: smarthome1/heater
+          local:
+            endpoint: "{device}/{sensor}/{var:room1}/{source}"
+
       latlong:
         source: position
         destinations:
@@ -59,7 +83,7 @@ devices:
 
       temperature:
         source: house1_temperature
-        interval: 2  # Override source interval to 2 seconds (TBD)
+        interval: 2  # Override source interval to 2 seconds
         # ^^^ buffering, mantiene l'ultimo valore e lo invia ogni 2 secondi
         destinations:
           mqtt:

@@ -1,13 +1,16 @@
+import asyncio
 from typing import Literal, Optional, List, Any, Dict
 from scipy import stats
 from dataclasses import dataclass
 
 from mockpt.source.base import SourceBase, SourceBaseConfig
+from mockpt.source.enum import SourceName
 
 
 class RandomSourceConfig(SourceBaseConfig):
-    type: Literal["random"] = "random" # type: ignore
+    type: Literal[SourceName.RANDOM.value] = SourceName.RANDOM.value # type: ignore
     rv: str
+    interval: float
     rv_params: Optional[Dict[str, Any]] = None
     max: Optional[float] = None
     min: Optional[float] = None
@@ -20,7 +23,10 @@ class RandomSource(SourceBase):
     
     def __post_init__(self):
         super().__post_init__()
-
+        
+        if self.config.interval is not None and self.config.interval <= 0:
+            raise ValueError("Interval must be a positive number.")
+        
         # Extract parameters for the random variable
         rv_params = {}
         if self.config.rv_params:
@@ -45,31 +51,18 @@ class RandomSource(SourceBase):
             
         return valore
 
-    async def _next(self):
+    async def _datastream(self):
+        while True:
+            value = self._apply_modifiers(
+                self.distribution.rvs(),
+                min_val=self.config.min,
+                max_val=self.config.max,
+                step=self.config.step
+            )
 
-        value = self._apply_modifiers(
-            self.distribution.rvs(),
-            min_val=self.config.min,
-            max_val=self.config.max,
-            step=self.config.step
-        )
-
-        return {
-            "value": value
-        }
+            yield {
+                "value": float(value)
+            }
+            
+            await asyncio.sleep(self.config.interval)
     
-
-if __name__ == "__main__":
-    config = RandomSourceConfig(
-        type="random",
-        rv="norm",
-    )
-
-    source = RandomSource(
-        identifier="temperature",
-        eventbus_client=None, # type: ignore
-        config=config,
-    )
-
-    for _ in range(10):
-        print(source._next())

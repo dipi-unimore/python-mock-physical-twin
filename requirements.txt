@@ -4,3 +4,5 @@ orbitalis
 scipy
 pandas
 argparse_dataclass
+aiohttp
+aiomqtt

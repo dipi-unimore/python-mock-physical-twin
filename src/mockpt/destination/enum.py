@@ -5,3 +5,4 @@ class DestinationName(StrEnum):
     
     MQTT = "mqtt"
     LOCAL = "local"
+    HTTP = "http"

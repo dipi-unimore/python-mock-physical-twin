@@ -172,4 +172,5 @@ async def main(options: CliOptions):
 if __name__ == "__main__":
     parser = ArgumentParser(CliOptions)
     options: CliOptions = parser.parse_args()
+        
     asyncio.run(main(options))
