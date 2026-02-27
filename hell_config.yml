@@ -2,9 +2,26 @@ destinations:
   foo:
     type: local
     directory: ./output
+    processor_path: /home/nricciardi/Repositories/python-mock-physical-twin/processor.py
+    processor_function: p
+
+  foo2:
+    type: local
+    directory: ./output
     
 sources:
   foo:
+    type: csv
+    file: ./data/humidity.csv
+    rotate: false
+    interval: 0.5
+
+  foo2:
+    type: random
+    rv: uniform
+    interval: 1
+
+  foo3:
     type: random
     rv: uniform
     interval: 1
@@ -17,7 +34,6 @@ devices:
     sensors:
       foo:
         source: foo
-        interval: 2  # Override source interval to 2 seconds
         # ^^^ buffering, mantiene l'ultimo valore e lo invia ogni 2 secondi
         destinations:
           foo:

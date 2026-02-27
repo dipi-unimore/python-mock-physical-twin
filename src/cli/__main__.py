@@ -10,7 +10,7 @@ from busline.local.local_publisher import LocalPublisher
 from busline.local.local_subscriber import LocalSubscriber
 
 from app_config import AppConfig
-from cli import CliOptions
+from mockpt.common import id_wrapper
 from mockpt.destination.base import DestinationBase
 from mockpt.destination import destination_class_by_type
 from mockpt.destination.config import DestinationConfig
@@ -19,6 +19,36 @@ from mockpt.device.config import DeviceConfig
 from mockpt.source import source_class_by_type
 from mockpt.source.base import SourceBase
 from mockpt.source.config import SourceConfig
+from dataclasses import dataclass, field
+
+
+@dataclass
+class CliOptions:
+    """Command Line Interface options."""
+    
+    config: str = field(
+        metadata=dict(
+            args=["-c", "--config"],
+            help="Path to the configuration file."
+        )
+    )
+    
+    log: str = field(
+        default="INFO",
+        metadata=dict(
+            args=["--log"],
+            choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+            help="Set the logging level."
+        )
+    )
+    
+    strict_config_validation: bool = field(
+        default=False,
+        metadata=dict(
+            args=["--strict-config-validation"],
+            help="Enable strict configuration validation."
+        )
+    )
 
 
 def setup_logging(log_level_str: str) -> None:
@@ -93,6 +123,7 @@ def build_devices(devices_configs: Dict[str, DeviceConfig]) -> Dict[str, Device]
     
     return devices
 
+
 async def main(options: CliOptions):
     setup_logging(options.log)
     
@@ -102,6 +133,15 @@ async def main(options: CliOptions):
     logger.debug(f"Loading config from: {options.config}")
     
     app_config = AppConfig.from_yaml_file(options.config)
+    
+    if app_config.wrap_needed():
+        logger.warning("Some identifiers are used in multiple contexts (sources, destinations, devices)")
+        
+        if options.strict_config_validation:
+            logger.error("Strict config validation is enabled, but some identifiers are used in multiple contexts. Please fix the config or disable strict validation.")
+            raise ValueError("Some identifiers are used in multiple contexts (sources, destinations, devices)")
+    
+        app_config.wrap_names_if_needed()   # wrap identifiers after loading config, to have them available for validation and building of sources/destinations/devices
     
     destinations = build_destinations(app_config.destinations)
     

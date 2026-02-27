@@ -1,5 +1,7 @@
-from typing import Optional, Dict, Any
-from pydantic import BaseModel, Field
+from typing import Callable, Optional, Dict, Any
+import importlib.util
+import os
+from pydantic import BaseModel, Field, PrivateAttr, computed_field, model_validator
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import json
@@ -10,6 +12,7 @@ from orbitalis.plugin.operation import operation
 from orbitalis.orbiter.schemaspec import Input, Output
 from busline.event.message.avro_message import AvroMessageMixin
 
+from mockpt.common import id_wrapper
 from mockpt.common.data_message import DataMessage
 from mockpt.common.send_message import SendMessage
 
@@ -17,7 +20,6 @@ from mockpt.common.send_message import SendMessage
 class DestinationBaseConfig(BaseModel):
     type: str = Field(frozen=True)
     description: Optional[str] = None
-
 
 
 @dataclass

@@ -11,7 +11,7 @@ from mockpt.destination.enum import DestinationName
 class HttpDestinationConfig(DestinationBaseConfig):
     type: Literal[DestinationName.HTTP.value] = DestinationName.HTTP.value # type: ignore
     base_url: str
-    method: str = "POST"
+    method: Literal["GET", "POST", "PUT", "DELETE"] = "POST"
     headers: Optional[Dict[str, str]] = None
 
 

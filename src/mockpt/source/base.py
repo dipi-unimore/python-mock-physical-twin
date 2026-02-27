@@ -11,6 +11,7 @@ from orbitalis.plugin.operation import operation
 from orbitalis.orbiter.schemaspec import Input
 from busline.event.message.avro_message import AvroMessageMixin
 
+from mockpt.common import id_wrapper
 from mockpt.common.data_message import DataMessage
 from mockpt.common.operation_name import OperationName
 

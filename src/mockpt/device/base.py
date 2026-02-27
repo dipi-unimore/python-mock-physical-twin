@@ -7,6 +7,7 @@ from orbitalis.core.requirement import OperationRequirement, Constraint
 from orbitalis.orbiter.schemaspec import Input, Output
 from orbitalis.core.sink import sink
 from busline.event.event import Event
+from mockpt.common import id_wrapper
 from mockpt.common.operation_name import OperationName
 from mockpt.common.send_message import SendMessage
 from mockpt.device.config import DeviceConfig
@@ -20,16 +21,23 @@ class SourceState:
     value_updated: asyncio.Event = field(default_factory=asyncio.Event, init=False)
     loop_task: Optional[asyncio.Task] = field(default=None, init=False)
     
-    def put(self, value: DataMessage):
+    async def put(self, value: DataMessage):
+        while self.value_updated.is_set():
+            await asyncio.sleep(0)    # wait until the current value is processed and cleared by the loop
+        
         self.last_value = value
         self.value_updated.set()
-
+        
+        
 
 @dataclass(kw_only=True)
 class Device(Core):
     config: DeviceConfig
     _source_states: Dict[str, SourceState] = field(default_factory=dict)
 
+    @property
+    def device_identifier(self) -> str:
+        return id_wrapper.device_identifier(self.identifier)
 
     def __post_init__(self):
         super().__post_init__()
@@ -49,17 +57,22 @@ class Device(Core):
         )
 
         for identifier, sensor in self.config.sensors.items():
-            self.register_sensor(identifier, sensor)
+            self.register_sensor(
+                identifier,
+                sensor
+            )
 
 
     def register_sensor(self, sensor_identifier: str, config: SensorBaseConfig):
         self.operation_requirements[OperationName.NEXT].constraint.mandatory.append(config.source)
         
         state = SourceState()
-        self._source_states[config.source] = state      # must be stored to be started later and to put new values when received
+        
+        source_identifier = config.source
+        self._source_states[source_identifier] = state      # must be stored to be started later and to put new values when received
         
         state.value_updated.clear()
-        state.loop_task = asyncio.create_task(self._sensor_elaboration_loop(sensor_identifier, config.source))
+        state.loop_task = asyncio.create_task(self._sensor_elaboration_loop(sensor_identifier, source_identifier))
         
     async def _on_stopping(self, *args, **kwargs):
         await super()._on_stopping(*args, **kwargs)
@@ -73,11 +86,14 @@ class Device(Core):
     )
     async def _next_event_handler(self, topic: str, event: Event[DataMessage]):
         assert event.payload is not None, "Payload must be provided for next operation"
-        if event.payload.source_identifier not in self._source_states:
-            logging.warning(f"Received data from unknown source '{event.payload.source_identifier}' for device '{self.identifier}'. Ignoring.")
+        
+        source_identifier = event.payload.source_identifier
+        
+        if source_identifier not in self._source_states:
+            logging.warning(f"Received data from unknown source '{source_identifier}' for device '{self.identifier}'. Ignoring.")
             return
         
-        self._source_states[event.payload.source_identifier].put(event.payload)
+        await self._source_states[source_identifier].put(event.payload)
 
 
     async def _sensor_elaboration_loop(self, sensor_identifier: str, source_identifier: str):
@@ -97,6 +113,7 @@ class Device(Core):
                 
         else:
             while True:
+                
                 await source_state.value_updated.wait()
                 source_state.value_updated.clear()
                 
