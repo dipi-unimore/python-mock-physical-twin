@@ -1,9 +1,10 @@
 import asyncio
-from typing import Literal, Optional, List, Any, Dict
+from typing import Literal, Optional, List, Any, Dict, override
 from scipy import stats
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from mockpt.source.base import SourceBase, SourceBaseConfig
+from mockpt.source.datastream_mixin import DataStreamMixin
 from mockpt.source.enum import SourceName
 
 
@@ -18,7 +19,7 @@ class RandomSourceConfig(SourceBaseConfig):
 
 
 @dataclass
-class RandomSource(SourceBase):
+class RandomSource(DataStreamMixin, SourceBase):
     config: RandomSourceConfig # type: ignore
     
     def __post_init__(self):
@@ -37,7 +38,7 @@ class RandomSource(SourceBase):
             self.distribution = getattr(stats, self.config.rv)(**rv_params)
         except AttributeError:
             raise ValueError(f"Invalid random variable name: {self.config.rv}")
-
+        
     def _apply_modifiers(self, valore, min_val=None, max_val=None, step=None):
         
         if step is not None and step > 0:
@@ -50,9 +51,10 @@ class RandomSource(SourceBase):
             valore = max(valore, min_val)
             
         return valore
-
+    
+    @override
     async def _datastream(self):
-        while True:
+        while self._datastream_turn_off.is_set() is False:
             value = self._apply_modifiers(
                 self.distribution.rvs(),
                 min_val=self.config.min,
@@ -60,9 +62,11 @@ class RandomSource(SourceBase):
                 step=self.config.step
             )
 
-            yield {
+            await self._data_queue.put({
                 "value": float(value)
-            }
+            })
+            
+            # response = await self._response_queue.get()    # wait for the response to be put in the queue by the device after processing the data
             
             await asyncio.sleep(self.config.interval)
     

@@ -9,13 +9,13 @@ from mockpt.source.enum import SourceName
 
 class HttpSourceConfig(SourceBaseConfig):
     type: Literal[SourceName.HTTP.value] = SourceName.HTTP.value # type: ignore
-    path: str
-    method: Literal["GET", "POST", "PUT", "DELETE"] = "POST"
+    path: str    
     host: str = "0.0.0.0"
     port: int = 8080
     content_type: Optional[str] = None
-    # TODO: scegliere codice di risposta OK
-    # TODO: informazioni per gestire la risposta FAIL
+    method: Literal["GET", "POST", "PUT", "DELETE"] = "PUT"
+    ok_response_code: int = 201
+    fail_response_code: int = 412
 
 
 @dataclass
@@ -23,8 +23,12 @@ class HttpSource(SourceBase):
     config: HttpSourceConfig  # type: ignore
     _runner: web.AppRunner = field(init=False)
     _site: web.TCPSite = field(init=False)
-    _queue: asyncio.Queue = field(default_factory=asyncio.Queue, init=False)
-    # TODO: response queue
+    
+    
+    @property
+    def mandatory_response_handling(self) -> bool:
+        return True
+
 
     async def _handle_request(self, request: web.Request) -> web.Response:
         
@@ -34,13 +38,17 @@ class HttpSource(SourceBase):
         
         payload = await request.text()
         
-        # TODO: sostituire con push verso device e attesa risposta
-        await self._queue.put(payload)
+        assert self._data_queue.empty(), "Data queue is full, previous data not yet processed by the device"
+        assert self._response_queue.empty(), "Response queue is full, previous response not yet processed by the device"
         
-        # TODO: await response queue
+        await self._data_queue.put(payload)
         
-        # TODO: gestire risposta OK/FAIL
-        return web.Response(status=200, text="OK")
+        response = await self._response_queue.get()    # wait for the response to be put in the queue by the device after processing the data
+        
+        if response.success:
+            return web.Response(status=self.config.ok_response_code, text=response.message)
+        else:
+            return web.Response(status=self.config.fail_response_code, text=response.message)
 
     async def _on_starting(self, *args, **kwargs):
         await super()._on_starting(*args, **kwargs)
@@ -67,10 +75,3 @@ class HttpSource(SourceBase):
             await self._runner.cleanup()
             
         await super()._on_stopping(*args, **kwargs)
-
-    async def _datastream(self):
-        while True:
-            payload = await self._queue.get()
-            yield {
-                "value": payload
-            }

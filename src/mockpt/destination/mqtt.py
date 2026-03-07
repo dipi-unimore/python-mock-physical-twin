@@ -6,7 +6,7 @@ from contextlib import AsyncExitStack
 
 from mockpt.destination.enum import DestinationName 
 from mockpt.destination.base import DestinationBase, DestinationBaseConfig
-from mockpt.common.data_message import DataMessage
+from mockpt.common.message.data_message import DataMessage
 
 
 class MqttDestinationConfig(DestinationBaseConfig):

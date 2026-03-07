@@ -107,11 +107,3 @@ devices:
           mqtt:
             endpoint: smarthome/switch
 
-
-# (dev) curl -- X --> server http (source, plugin) --> 204 OK 
-
-# (source, plugin) -- X --> device (ok, raise)
-
-# device -- (ok, raise) --> source
-
-# è lo stato che cambia non il comando, quindi se arriva un comando da http, viene processato e se è ok viene pubblicato su mqtt, http, local. Se è raise, non viene pubblicato nulla. Se arriva un nuovo comando prima che sia passato l'intervallo di tempo, viene scartato o sovrascritto? Dipende da come vogliamo gestire i comandi in arrivo. Potremmo decidere di sovrascrivere il comando precedente con quello nuovo, oppure di scartare il nuovo comando se il precedente non è ancora stato processato.

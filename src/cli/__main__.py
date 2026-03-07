@@ -14,7 +14,7 @@ from mockpt.common import id_wrapper
 from mockpt.destination.base import DestinationBase
 from mockpt.destination import destination_class_by_type
 from mockpt.destination.config import DestinationConfig
-from mockpt.device.base import Device
+from mockpt.device.device import Device
 from mockpt.device.config import DeviceConfig
 from mockpt.source import source_class_by_type
 from mockpt.source.base import SourceBase
@@ -209,7 +209,7 @@ async def main(options: CliOptions):
     
     # Turn on datastream for sources after all devices have started, to ensure that devices receive the first data from sources
     for source in sources.values():
-        source.turn_on_datastream()
+        await source.turn_on_datastream()
     
     while True:
         await asyncio.sleep(0)

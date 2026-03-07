@@ -1,9 +1,11 @@
-from typing import Literal, Optional, List, Any, Dict
+import asyncio
+from typing import Literal, Optional, List, Any, Dict, override
 import aiomqtt
 from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
 
 from mockpt.source.base import SourceBase, SourceBaseConfig
+from mockpt.source.datastream_mixin import DataStreamMixin
 from mockpt.source.enum import SourceName
 
 
@@ -17,7 +19,7 @@ class MqttSourceConfig(SourceBaseConfig):
 
 
 @dataclass
-class MqttSource(SourceBase):
+class MqttSource(DataStreamMixin, SourceBase):
     config: MqttSourceConfig # type: ignore
     mqtt_client: aiomqtt.Client = field(init=False)
     _exit_stack: AsyncExitStack = field(default_factory=AsyncExitStack, init=False)
@@ -46,10 +48,10 @@ class MqttSource(SourceBase):
             
         await super()._on_stopping(*args, **kwargs)
 
-
+    @override
     async def _datastream(self):
         async for message in self.mqtt_client.messages:
             payload = message.payload.decode()
-            yield {
+            await self._data_queue.put({
                 "value": payload
-            }
+            })

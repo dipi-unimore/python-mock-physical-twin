@@ -1,10 +1,11 @@
 import asyncio
 import logging
-from typing import Any, Dict, Literal, Optional, List
+from typing import Any, Dict, Literal, Optional, List, override
 import pandas as pd
 from dataclasses import dataclass, field
 
 from mockpt.source.base import SourceBase, SourceBaseConfig
+from mockpt.source.datastream_mixin import DataStreamMixin
 from mockpt.source.enum import SourceName
 
 
@@ -18,10 +19,11 @@ class CsvSourceConfig(SourceBaseConfig):
 
 
 @dataclass
-class CsvSource(SourceBase):
+class CsvSource(DataStreamMixin, SourceBase):
     config: CsvSourceConfig # type: ignore
     data: pd.DataFrame = field(init=False)
     index: int = field(default=0, init=False)
+    __datastream_task: Optional[asyncio.Task] = field(default=None, init=False)
     
     def __post_init__(self):
         super().__post_init__()
@@ -37,6 +39,7 @@ class CsvSource(SourceBase):
         if self.config.interval is None and self.config.timestamp_column is None:
             raise ValueError("Either 'interval' or 'timestamp_column' must be specified.")
     
+    @override
     async def _datastream(self):
         while True:
             if self.index >= len(self.data):
@@ -58,7 +61,7 @@ class CsvSource(SourceBase):
                 
                 result = {str(col): row[col] for col in sorted(cols)}
 
-            yield result
+            await self._data_queue.put(result)
             
             if self.config.interval is not None:
                 await asyncio.sleep(self.config.interval)

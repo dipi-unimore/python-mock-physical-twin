@@ -2,7 +2,7 @@ import asyncio
 from typing import Optional
 from dataclasses import dataclass, field
 
-from mockpt.common.data_message import DataMessage
+from mockpt.common.message.data_message import DataMessage
 
 
 @dataclass(kw_only=True)

@@ -1,41 +1,23 @@
 destinations:
-  foo:
-    type: local
-    directory: ./output
-    processor_path: /home/nricciardi/Repositories/python-mock-physical-twin/processor.py
-    processor_function: p
-
-  foo2:
+  d1:
     type: local
     directory: ./output
     
 sources:
-  foo:
-    type: csv
-    file: ./data/humidity.csv
-    rotate: false
-    interval: 0.5
-
-  foo2:
+  s1:
     type: random
     rv: uniform
-    interval: 10
-
-  foo3:
-    type: random
-    rv: uniform
-    interval: 10
+    interval: 1
 
 devices:
-  foo:
+  device:
     vars:
       room1: living_room
       room2: bedroom
     sensors:
-      foo:
-        source: foo
-        # ^^^ buffering, mantiene l'ultimo valore e lo invia ogni 2 secondi
+      sensor1:
+        source: s1
         destinations:
-          foo:
+          d1:
             endpoint: "{device}/{sensor}/{var:room1}/{source}"
             

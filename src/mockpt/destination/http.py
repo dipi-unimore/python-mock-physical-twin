@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 import aiohttp
 
 from mockpt.destination.base import DestinationBase, DestinationBaseConfig
-from mockpt.common.data_message import DataMessage
+from mockpt.common.message.data_message import DataMessage
 from mockpt.destination.enum import DestinationName
 
 

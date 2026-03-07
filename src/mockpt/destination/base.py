@@ -13,8 +13,8 @@ from orbitalis.orbiter.schemaspec import Input, Output
 from busline.event.message.avro_message import AvroMessageMixin
 
 from mockpt.common import id_wrapper
-from mockpt.common.data_message import DataMessage
-from mockpt.common.send_message import SendMessage
+from mockpt.common.message.data_message import DataMessage
+from mockpt.common.message.send_message import SendMessage
 
 
 class DestinationBaseConfig(BaseModel):

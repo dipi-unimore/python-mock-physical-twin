@@ -3,7 +3,7 @@ from typing import Dict, Any
 import json
 from busline.event.message.avro_message import AvroMessageMixin
 
-from mockpt.common.data_message import DataMessage
+from mockpt.common.message.data_message import DataMessage
 
 
 @dataclass(frozen=True)
