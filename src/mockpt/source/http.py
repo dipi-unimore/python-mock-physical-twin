@@ -14,6 +14,8 @@ class HttpSourceConfig(SourceBaseConfig):
     host: str = "0.0.0.0"
     port: int = 8080
     content_type: Optional[str] = None
+    # TODO: scegliere codice di risposta OK
+    # TODO: informazioni per gestire la risposta FAIL
 
 
 @dataclass
@@ -22,6 +24,7 @@ class HttpSource(SourceBase):
     _runner: web.AppRunner = field(init=False)
     _site: web.TCPSite = field(init=False)
     _queue: asyncio.Queue = field(default_factory=asyncio.Queue, init=False)
+    # TODO: response queue
 
     async def _handle_request(self, request: web.Request) -> web.Response:
         
@@ -31,8 +34,12 @@ class HttpSource(SourceBase):
         
         payload = await request.text()
         
+        # TODO: sostituire con push verso device e attesa risposta
         await self._queue.put(payload)
         
+        # TODO: await response queue
+        
+        # TODO: gestire risposta OK/FAIL
         return web.Response(status=200, text="OK")
 
     async def _on_starting(self, *args, **kwargs):

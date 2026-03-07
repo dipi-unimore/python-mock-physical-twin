@@ -47,6 +47,17 @@ devices:
       room1: living_room
       room2: bedroom
 
+    plcs:
+      reg:
+        source: temperature
+        destinations:
+          mqtt:
+            endpoint: "{device}/{sensor}/{var:room1}/{source}"
+          http:
+            endpoint: smarthome/temperature
+          local:
+            endpoint: "{device}/{sensor}/{var:room1}/{source}.txt"
+
     sensors:
       temperature:
         source: temperature
@@ -87,3 +98,20 @@ devices:
             endpoint: smarthome/light_level
           local:
             endpoint: "{device}/{source}.txt"
+
+    actuators:
+      switch:
+        source: http  # server
+        function_path: /path/to/switch_function.py # input, current state -> new state | raise
+        destinations:
+          mqtt:
+            endpoint: smarthome/switch
+
+
+# (dev) curl -- X --> server http (source, plugin) --> 204 OK 
+
+# (source, plugin) -- X --> device (ok, raise)
+
+# device -- (ok, raise) --> source
+
+# è lo stato che cambia non il comando, quindi se arriva un comando da http, viene processato e se è ok viene pubblicato su mqtt, http, local. Se è raise, non viene pubblicato nulla. Se arriva un nuovo comando prima che sia passato l'intervallo di tempo, viene scartato o sovrascritto? Dipende da come vogliamo gestire i comandi in arrivo. Potremmo decidere di sovrascrivere il comando precedente con quello nuovo, oppure di scartare il nuovo comando se il precedente non è ancora stato processato.

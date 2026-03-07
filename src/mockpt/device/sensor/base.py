@@ -13,6 +13,6 @@ class SensorBaseConfig(BaseModel):
     source: str
     interval: Optional[float] = None
     destinations: Dict[str, DestinationRecord] = Field(default_factory=dict)
-
+    # TODO: function path da eseguire sui dati prima di inviarli alle destinazioni
 
 

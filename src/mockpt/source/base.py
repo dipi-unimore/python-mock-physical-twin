@@ -45,7 +45,7 @@ class SourceBase(Plugin, ABC):
         default_policy=Policy.no_constraints()
     )
     async def next(self, topic: str, event: Event):
-        pass    # nothing to do
+        pass    # nothing to do, it is declared just to define the operation and its input/output
 
     
     async def _push(self, data_message: DataMessage):
@@ -54,6 +54,8 @@ class SourceBase(Plugin, ABC):
             topics=[str(connections[OperationName.NEXT].output_topic) for connections in self._connections.values() if connections[OperationName.NEXT].has_output],
             message=data_message
         )
+        
+    # TODO: nuova operazione per ottenere la risposta dal device
 
     
     @abstractmethod

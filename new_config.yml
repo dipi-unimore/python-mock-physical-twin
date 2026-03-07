@@ -44,10 +44,12 @@ sources:
     broker_port: 1883
 
   house1_light:
-    type: http
+    type: http  # server
     path: /smarthome1/light
     method: POST
     
+
+
 
 devices:
   smarthome1:
@@ -83,6 +85,7 @@ devices:
 
       temperature:
         source: house1_temperature
+        function_path: /path/to/temperature_function.py # input, current state -> new state | raise
         interval: 2  # Override source interval to 2 seconds
         # ^^^ buffering, mantiene l'ultimo valore e lo invia ogni 2 secondi
         destinations:
@@ -104,7 +107,17 @@ devices:
         # TODO: ok partire con JSON semplice, poi estendere con decisione developer
     
     # TODO:
-    # actuators:
-    #   heater:   # NO => considerare come gestire in/out; inizialmente deve essere indipendente dai sensori, quindi senza stato. Ci può essere una funzione associata da chiamare quando arriva un comando
-    #     source: house1_heater
-    #     initial_value: "OFF"
+    actuators:
+      switch:
+        actuator_source: http_source
+        function_path: /path/to/switch_function.py # input, current state -> new state | raise
+        destinations:   # se http potrebbe non essere necessaria una destination
+          mqtt:
+            endpoint: smarthome1/switch
+
+
+
+# sensor: source -> stateX -> destination
+# actuator: input -> stateX -> destination
+
+

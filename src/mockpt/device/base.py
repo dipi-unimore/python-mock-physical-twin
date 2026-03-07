@@ -15,12 +15,15 @@ from mockpt.device.sensor.base import DestinationRecord, SensorBaseConfig
 from mockpt.common.data_message import DataMessage
 
 
+# TODO: rinominare in State
 @dataclass(kw_only=True)
 class SourceState:
     queue: asyncio.Queue[DataMessage] = field(default_factory=lambda: asyncio.Queue(maxsize=1), init=False)
     loop_task: Optional[asyncio.Task] = field(default=None, init=False)
+    # TODO: funzione con la logica di elaborazione dei nuovi valori in arrivo, default: identity function
     
     async def put(self, value: DataMessage):
+        # TODO: qui la logica di inserimento dei nuovi valori con eventuale raise se non conferme alla logica
         await self.queue.put(value)
         
         
@@ -87,6 +90,7 @@ class Device(Core):
             logging.warning(f"Received data from unknown source '{source_identifier}' for device '{self.identifier}'. Ignoring.")
             return
         
+        # TODO: try-except per "rispondere" alla source
         await self._source_states[source_identifier].put(event.payload)
 
 
@@ -122,6 +126,7 @@ class Device(Core):
         endpoint = endpoint.replace("{device}", self.identifier)
         endpoint = endpoint.replace("{sensor}", sensor_identifier)
         endpoint = endpoint.replace("{source}", source_identifier)
+        # TODO: destination wildcard
         for var_name, var_value in self.config.vars.items():
             endpoint = endpoint.replace(f"{{var:{var_name}}}", var_value)
             
