@@ -4,7 +4,7 @@ from mockpt.common.message.data_message import DataMessage
 from mockpt.state.logic import StateLogic
 
 
-class IdentityStateLogic(StateLogic):
+class CiaoStateLogic(StateLogic):
     
     @override
     def process(self, input: DataMessage) -> DataMessage:

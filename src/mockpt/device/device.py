@@ -17,9 +17,9 @@ from mockpt.state.state import State
 
 
 @dataclass(kw_only=True)
-class StateWrapper:
+class StateStream:
     state: State
-    loop_task: Optional[asyncio.Task] = None
+    stream_config: StreamConfig 
     
     async def put(self, value: DataMessage):
         await self.state.put(value)
@@ -32,13 +32,14 @@ class StateWrapper:
 @dataclass(kw_only=True)
 class Device(Core):
     config: DeviceConfig
-    _states: Dict[str, StateWrapper] = field(default_factory=dict, init=False)    # key: source identifier, value: state wrapper containing the state and the loop task for that source
-    _streams: Dict[str, StreamConfig] = field(default_factory=dict, init=False)
+    _states_streams: Dict[str, List[StateStream]] = field(default_factory=dict, init=False)   # source_identifier => [StateStream]
+    _loop_tasks: List[asyncio.Task] = field(default_factory=list, init=False)
+    _stop_event: asyncio.Event = field(default_factory=asyncio.Event, init=False)
 
     @property
     def device_identifier(self) -> str:
         return id_wrapper.device_identifier(self.identifier)
-
+    
     def __post_init__(self):
         super().__post_init__()
 
@@ -63,33 +64,37 @@ class Device(Core):
             )
         )
         
-        self._streams = self.config.streams
+        for _, stream_group in self.config.stream_groups.items():
+            for _, stream_config in stream_group.items():
+                self.register_stream(
+                    config=stream_config
+                )
+        
+        for state_streams in self._states_streams.values():     
+            for state_stream in state_streams:
+                self._loop_tasks.append(asyncio.create_task(self._stream_elaboration_loop(state_stream)))
 
-        for stream_id, stream_config in self._streams.items():
-            self.register_stream(
-                stream_identifier=stream_id,
-                config=stream_config
-            )
-
-
-    def register_stream(self, stream_identifier: str, config: StreamConfig):
+    def register_stream(self, config: StreamConfig):
         self.operation_requirements[OperationName.NEXT].constraint.mandatory.append(config.source)
         
-        state = StateWrapper(state=State(
-            logic=config.logic_class()
-        ))
+        state_stream = StateStream(
+            state=State(
+                logic=config.logic_class()
+            ),
+            stream_config=config
+        )
         
         source_identifier = config.source
-        self._states[source_identifier] = state      # must be stored to be started later and to put new values when received
+        self._states_streams[source_identifier] = self._states_streams.get(source_identifier, []) + [state_stream]
         
-        state.loop_task = asyncio.create_task(self._stream_elaboration_loop(stream_identifier, source_identifier))
         
     async def _on_stopping(self, *args, **kwargs):
         await super()._on_stopping(*args, **kwargs)
         
-        for state in self._states.values():
-            if state.loop_task is not None:
-                state.loop_task.cancel()
+        self._stop_event.set()
+        for task in self._loop_tasks:
+            await task
+            
     
     @sink(
         operation_name=OperationName.NEXT
@@ -99,12 +104,13 @@ class Device(Core):
         
         source_identifier = event.payload.source_identifier
         
-        if source_identifier not in self._states:
+        if source_identifier not in self._states_streams:
             logging.warning(f"Received data from unknown source '{source_identifier}' for device '{self.identifier}'. Ignoring.")
             return
         
         try:
-            await self._states[source_identifier].put(event.payload)
+            for state_stream in self._states_streams[source_identifier]:
+                await state_stream.put(event.payload)
             
             await self.execute_using_plugin(
                 operation_name=OperationName.RESPONSE,
@@ -130,52 +136,37 @@ class Device(Core):
             )
 
 
-    async def _stream_elaboration_loop(self, stream_identifier: str, source_identifier: str):
-        source_state = self._states[source_identifier]
-        stream_config = self._streams[stream_identifier]
-        interval = stream_config.interval
-        destinations = stream_config.destinations
+    async def _stream_elaboration_loop(self, state_stream: StateStream):
+        
+        interval = state_stream.stream_config.interval
+        destinations = state_stream.stream_config.destinations
         
         last_processed_value = None
 
-        while True:
+        while not self._stop_event.is_set():
             if interval is not None:
                 # If an interval is specified, we want to send the last value at that interval, 
                 # so we check if there's a new value without waiting, and if there is we update the last value to send. 
                 # Then we wait for the specified interval before sending the last value 
                 # (which could be the same if no new value arrived, or a new one if it did).
                 try:
-                    last_processed_value = await source_state.get()
+                    last_processed_value = await state_stream.get()
                 except asyncio.QueueEmpty:
                     pass
                 
                 if last_processed_value:
-                    await self._send_by_destinations(stream_identifier, source_identifier, last_processed_value, destinations)
+                    await self._send_by_destinations(last_processed_value, destinations)
                 
                 await asyncio.sleep(interval)
             else:
-                msg = await source_state.get()
-                await self._send_by_destinations(stream_identifier, source_identifier, msg, destinations)
+                msg = await state_stream.get()
+                await self._send_by_destinations(msg, destinations)
 
-    
-    def _wild_card_replace(self, endpoint: str, sensor_identifier: str, source_identifier: str, destination_identifier: str) -> str:
-        endpoint = endpoint.replace("{device}", self.identifier)
-        endpoint = endpoint.replace("{stream}", sensor_identifier)
-        endpoint = endpoint.replace("{source}", source_identifier)
-        endpoint = endpoint.replace("{destination}", destination_identifier)
-        
-        for var_name, var_value in self.config.vars.items():
-            endpoint = endpoint.replace(f"{{var:{var_name}}}", var_value)
-            
-        return endpoint
-
-    async def _send_by_destinations(self, sensor_identifier: str, source_identifier: str, data: DataMessage, destinations: Dict[str, DestinationRecord]):
+    async def _send_by_destinations(self, data: DataMessage, destinations: Dict[str, DestinationRecord]):
         for destination_identifier, destination_record in destinations.items():         
-            
-            endpoint = self._wild_card_replace(destination_record.endpoint, sensor_identifier, source_identifier, destination_identifier)
-               
+                           
             data_to_send = SendMessage(
-                endpoint=endpoint,
+                endpoint=destination_record.endpoint,
                 data=data
             )
             
@@ -185,6 +176,7 @@ class Device(Core):
                     plugin_identifier=destination_identifier,
                     data=data_to_send
                 )
+                
             except ValueError as e:
                 logging.warning(f"Failed to send data to destination {destination_identifier}: {e}")
 

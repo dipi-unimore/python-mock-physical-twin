@@ -1,6 +1,6 @@
 import importlib.util
 import sys
-from typing import Dict, Optional, Type
+from typing import Dict, List, Optional, Set, Type
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
@@ -67,11 +67,11 @@ class DeviceConfig(BaseModel):
     @property
     def stream_groups(self) -> Dict[str, Dict[str, StreamConfig]]:
         return self.model_extra or {}
-
+    
     @property
-    def streams(self) -> Dict[str, StreamConfig]:
-        all_streams = {}
+    def stream_configs(self) -> List[StreamConfig]:
+        streams = []
         for group in self.stream_groups.values():
-            if isinstance(group, dict):
-                all_streams.update(group)
-        return all_streams
+            for _, stream_config in group.items():
+                streams.append(stream_config)
+        return streams

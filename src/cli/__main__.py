@@ -135,6 +135,8 @@ async def main(options: CliOptions):
     # Load and parse the configuration file
     app_config = AppConfig.from_yaml_file(options.config)
     
+    app_config.replace_wildcards()
+    
     if app_config.wrap_needed():
         logger.warning("Some identifiers are used in multiple contexts (sources, destinations, devices)")
         
@@ -152,17 +154,17 @@ async def main(options: CliOptions):
     
     # Check if all sources and destinations required by devices are present
     sources_required = set([
-        source_identifier
+        source_config.source
         for device_config in app_config.devices.values()
-        for sensor_config in device_config.streams.values()
-        for source_identifier in [sensor_config.source]
+        for sensor_config in device_config.stream_configs
+        for source_config in [sensor_config]
     ])
     
     destinations_required = set([
-        destination_identifier
+        dest
         for device_config in app_config.devices.values()
-        for sensor_config in device_config.streams.values()
-        for destination_identifier in sensor_config.destinations.keys()
+        for sensor_config in device_config.stream_configs
+        for dest in sensor_config.destinations.keys()
     ])
     
     missing_sources = sources_required - set(sources.keys())

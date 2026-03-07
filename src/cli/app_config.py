@@ -26,6 +26,32 @@ class AppConfig(BaseModel):
             content = f.read()
         return cls.from_yaml(content)
     
+    def _wild_card_replace(self, endpoint: str, device_identifier: str, vars: Dict[str, str], sensor_identifier: str, source_identifier: str, destination_identifier: str) -> str:
+        endpoint = endpoint.replace("{device}", device_identifier)
+        endpoint = endpoint.replace("{stream}", sensor_identifier)
+        endpoint = endpoint.replace("{source}", source_identifier)
+        endpoint = endpoint.replace("{destination}", destination_identifier)
+        
+        for var_name, var_value in vars.items():
+            endpoint = endpoint.replace(f"{{var:{var_name}}}", var_value)
+            
+        return endpoint
+    
+    def replace_wildcards(self):
+        for device_identifier, device_config in self.devices.items():
+            for stream_config in device_config.stream_configs:
+                for destination_identifier, destination_record in stream_config.destinations.items():
+                    endpoint = self._wild_card_replace(
+                        destination_record.endpoint,
+                        device_identifier=device_identifier,
+                        vars=device_config.vars,
+                        sensor_identifier=stream_config.source,
+                        source_identifier=stream_config.source,
+                        destination_identifier=destination_identifier
+                    )
+                    destination_record.endpoint = endpoint
+    
+    
     def wrap_names(self):
         self.destinations = {
             id_wrapper.destination_identifier(name): config for name, config in self.destinations.items()
@@ -40,7 +66,7 @@ class AppConfig(BaseModel):
         }
         
         for device_config in self.devices.values():
-            for stream_config in device_config.streams.values():
+            for stream_config in device_config.stream_configs:
                 stream_config.source = id_wrapper.source_identifier(stream_config.source)
                 stream_config.destinations = {
                     id_wrapper.destination_identifier(dest): config for dest, config in stream_config.destinations.items()
@@ -54,7 +80,7 @@ class AppConfig(BaseModel):
         counts.update(self.devices.keys())
         
         for device_config in self.devices.values():
-            for stream_config in device_config.streams.values():
+            for stream_config in device_config.stream_configs:
                 counts[stream_config.source] += 1
                 counts.update(stream_config.destinations.keys())
                 
@@ -68,7 +94,7 @@ class AppConfig(BaseModel):
         counts.update(self.devices.keys())
                 
         for device_config in self.devices.values():
-            for stream_config in device_config.streams.values():
+            for stream_config in device_config.stream_configs:
                 counts[stream_config.source] += 1
                 counts.update(stream_config.destinations.keys())
                 
@@ -91,7 +117,7 @@ class AppConfig(BaseModel):
         }
         
         for device_config in self.devices.values():
-            for stream_config in device_config.streams.values():
+            for stream_config in device_config.stream_configs:
                 stream_config.source = _wrap(stream_config.source, id_wrapper.source_identifier)
                 stream_config.destinations = {
                     _wrap(dest, id_wrapper.destination_identifier): config 

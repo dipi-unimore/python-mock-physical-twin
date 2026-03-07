@@ -51,12 +51,8 @@ devices:
       reg:
         source: temperature
         destinations:
-          mqtt:
-            endpoint: "{device}/{stream}/{var:room1}/{source}"
-          http:
-            endpoint: smarthome/temperature
           local:
-            endpoint: "{device}/{stream}/{var:room1}/{source}.txt"
+            endpoint: "reg.txt"
 
     sensors:
       temperature:
@@ -84,7 +80,7 @@ devices:
         source: air_quality
         destinations:
           mqtt:
-            endpoint: "{device}/{source}"
+            endpoint: "{source}"
           http:
             endpoint: smarthome/air_quality
           local:
