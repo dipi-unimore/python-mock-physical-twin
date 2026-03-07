@@ -9,8 +9,8 @@ from mockpt.state.logic import StateLogic
 
 @dataclass(kw_only=True)
 class State:
+    logic: StateLogic
     queue: asyncio.Queue[DataMessage] = field(default_factory=lambda: asyncio.Queue(maxsize=1), init=False)
-    logic: StateLogic = field(default_factory=IdentityStateLogic)
     
     async def put(self, value: DataMessage):
         

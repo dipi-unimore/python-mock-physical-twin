@@ -40,10 +40,10 @@ class AppConfig(BaseModel):
         }
         
         for device_config in self.devices.values():
-            for sensor_config in device_config.sensors.values():
-                sensor_config.source = id_wrapper.source_identifier(sensor_config.source)
-                sensor_config.destinations = {
-                    id_wrapper.destination_identifier(dest): config for dest, config in sensor_config.destinations.items()
+            for stream_config in device_config.streams.values():
+                stream_config.source = id_wrapper.source_identifier(stream_config.source)
+                stream_config.destinations = {
+                    id_wrapper.destination_identifier(dest): config for dest, config in stream_config.destinations.items()
                 }
                 
     def wrap_needed(self) -> bool:
@@ -54,9 +54,9 @@ class AppConfig(BaseModel):
         counts.update(self.devices.keys())
         
         for device_config in self.devices.values():
-            for sensor_config in device_config.sensors.values():
-                counts[sensor_config.source] += 1
-                counts.update(sensor_config.destinations.keys())
+            for stream_config in device_config.streams.values():
+                counts[stream_config.source] += 1
+                counts.update(stream_config.destinations.keys())
                 
         return any(count >= 2 for count in counts.values())
                 
@@ -66,11 +66,11 @@ class AppConfig(BaseModel):
         counts.update(self.destinations.keys())
         counts.update(self.sources.keys())
         counts.update(self.devices.keys())
-        
+                
         for device_config in self.devices.values():
-            for sensor_config in device_config.sensors.values():
-                counts[sensor_config.source] += 1
-                counts.update(sensor_config.destinations.keys())
+            for stream_config in device_config.streams.values():
+                counts[stream_config.source] += 1
+                counts.update(stream_config.destinations.keys())
                 
         def _wrap(name, wrapper_func):
             return wrapper_func(name) if counts[name] >= 2 else name
@@ -91,11 +91,11 @@ class AppConfig(BaseModel):
         }
         
         for device_config in self.devices.values():
-            for sensor_config in device_config.sensors.values():
-                sensor_config.source = _wrap(sensor_config.source, id_wrapper.source_identifier)
-                sensor_config.destinations = {
+            for stream_config in device_config.streams.values():
+                stream_config.source = _wrap(stream_config.source, id_wrapper.source_identifier)
+                stream_config.destinations = {
                     _wrap(dest, id_wrapper.destination_identifier): config 
-                    for dest, config in sensor_config.destinations.items()
+                    for dest, config in stream_config.destinations.items()
                 }
 
 

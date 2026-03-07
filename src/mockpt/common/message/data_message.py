@@ -10,13 +10,13 @@ class DataMessage(AvroMessageMixin):
     json_value: str
     
     @classmethod
-    def of(cls, source_identifier: str, value: Dict[str, Any]) -> "DataMessage":
+    def of(cls, source_identifier: str, value: Any) -> "DataMessage":
         return cls(
             source_identifier=source_identifier,
             json_value=json.dumps(value)
         )
 
     @property
-    def value(self) -> Dict[str, Any]:
+    def value(self) -> Any:
         return json.loads(self.json_value)
     

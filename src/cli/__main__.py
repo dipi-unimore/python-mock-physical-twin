@@ -154,14 +154,14 @@ async def main(options: CliOptions):
     sources_required = set([
         source_identifier
         for device_config in app_config.devices.values()
-        for sensor_config in device_config.sensors.values()
+        for sensor_config in device_config.streams.values()
         for source_identifier in [sensor_config.source]
     ])
     
     destinations_required = set([
         destination_identifier
         for device_config in app_config.devices.values()
-        for sensor_config in device_config.sensors.values()
+        for sensor_config in device_config.streams.values()
         for destination_identifier in sensor_config.destinations.keys()
     ])
     

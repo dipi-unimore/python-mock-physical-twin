@@ -1,14 +1,77 @@
+import importlib.util
+import sys
+from typing import Dict, Optional, Type
+from pathlib import Path
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
+
+from mockpt.state.identity_logic import IdentityStateLogic
+from mockpt.state.logic import StateLogic
 
 
-from typing import Dict, Optional
+class DestinationRecord(BaseModel):
+    endpoint: str
 
-from pydantic import BaseModel, Field
 
-from mockpt.device.sensor.base import SensorBaseConfig
+class StreamConfig(BaseModel):
+    description: Optional[str] = None
+    source: str
+    interval: Optional[float] = None
+    destinations: Dict[str, DestinationRecord] = Field(default_factory=dict)
+    logic: Optional[str] = None
+    
+    @property
+    def logic_class(self) -> Type[StateLogic]:
+        if self.logic is None:
+            return IdentityStateLogic
+    
+        path = Path(self.logic)
+        if not path.exists():
+            raise ValueError(f"Logic file not found: {self.logic}")
+        
+        module_name = path.stem
+        spec = importlib.util.spec_from_file_location(module_name, str(path))
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Could not load logic module from {self.logic}")
+        
+        module = importlib.util.module_from_spec(spec)
+        
+        sys.modules[module_name] = module   # prevent issues with imports in the logic file
+        
+        spec.loader.exec_module(module)
+
+        for name in dir(module):
+            obj = getattr(module, name)
+            if (isinstance(obj, type) and 
+                issubclass(obj, StateLogic) and 
+                obj is not StateLogic):
+                return obj
+            
+        raise ValueError(f"No valid StateLogic subclass found in {self.logic}")
 
 
 class DeviceConfig(BaseModel):
-    vars: Dict[str, str] = Field(default_factory=dict)
-    sensors: Dict[str, SensorBaseConfig]
+    model_config = ConfigDict(extra='allow')
     
-    # TODO: invece che sensors, una qualsiasi chiave
+    vars: Dict[str, str] = Field(default_factory=dict)
+    
+    @model_validator(mode='after')
+    def _parse_extra_fields(self) -> 'DeviceConfig':
+        if self.model_extra:
+            adapter = TypeAdapter(Dict[str, StreamConfig])
+            for group_name, content in self.model_extra.items():
+                if isinstance(content, dict):
+                    # Override the content with the validated and parsed version
+                    self.model_extra[group_name] = adapter.validate_python(content)
+        return self
+    
+    @property
+    def stream_groups(self) -> Dict[str, Dict[str, StreamConfig]]:
+        return self.model_extra or {}
+
+    @property
+    def streams(self) -> Dict[str, StreamConfig]:
+        all_streams = {}
+        for group in self.stream_groups.values():
+            if isinstance(group, dict):
+                all_streams.update(group)
+        return all_streams

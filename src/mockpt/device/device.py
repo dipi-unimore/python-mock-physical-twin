@@ -11,8 +11,7 @@ from mockpt.common import id_wrapper
 from mockpt.common.message.response_message import ResponseMessage
 from mockpt.common.operation_name import OperationName
 from mockpt.common.message.send_message import SendMessage
-from mockpt.device.config import DeviceConfig
-from mockpt.device.sensor.base import DestinationRecord, SensorBaseConfig
+from mockpt.device.config import DestinationRecord, DeviceConfig, StreamConfig
 from mockpt.common.message.data_message import DataMessage
 from mockpt.state.state import State
 
@@ -33,7 +32,8 @@ class StateWrapper:
 @dataclass(kw_only=True)
 class Device(Core):
     config: DeviceConfig
-    _states: Dict[str, StateWrapper] = field(default_factory=dict)
+    _states: Dict[str, StateWrapper] = field(default_factory=dict, init=False)    # key: source identifier, value: state wrapper containing the state and the loop task for that source
+    _streams: Dict[str, StreamConfig] = field(default_factory=dict, init=False)
 
     @property
     def device_identifier(self) -> str:
@@ -62,23 +62,27 @@ class Device(Core):
                 outputs=[Output.no_output()],
             )
         )
+        
+        self._streams = self.config.streams
 
-        for identifier, sensor in self.config.sensors.items():
-            self.register_sensor(
-                identifier,
-                sensor
+        for stream_id, stream_config in self._streams.items():
+            self.register_stream(
+                stream_identifier=stream_id,
+                config=stream_config
             )
 
 
-    def register_sensor(self, sensor_identifier: str, config: SensorBaseConfig):
+    def register_stream(self, stream_identifier: str, config: StreamConfig):
         self.operation_requirements[OperationName.NEXT].constraint.mandatory.append(config.source)
         
-        state = StateWrapper(state=State())
+        state = StateWrapper(state=State(
+            logic=config.logic_class()
+        ))
         
         source_identifier = config.source
         self._states[source_identifier] = state      # must be stored to be started later and to put new values when received
         
-        state.loop_task = asyncio.create_task(self._sensor_elaboration_loop(sensor_identifier, source_identifier))
+        state.loop_task = asyncio.create_task(self._stream_elaboration_loop(stream_identifier, source_identifier))
         
     async def _on_stopping(self, *args, **kwargs):
         await super()._on_stopping(*args, **kwargs)
@@ -126,11 +130,11 @@ class Device(Core):
             )
 
 
-    async def _sensor_elaboration_loop(self, sensor_identifier: str, source_identifier: str):
+    async def _stream_elaboration_loop(self, stream_identifier: str, source_identifier: str):
         source_state = self._states[source_identifier]
-        sensor_config = self.config.sensors[sensor_identifier]
-        interval = sensor_config.interval
-        destinations = sensor_config.destinations
+        stream_config = self._streams[stream_identifier]
+        interval = stream_config.interval
+        destinations = stream_config.destinations
         
         last_processed_value = None
 
@@ -146,17 +150,17 @@ class Device(Core):
                     pass
                 
                 if last_processed_value:
-                    await self._send_by_destinations(sensor_identifier, source_identifier, last_processed_value, destinations)
+                    await self._send_by_destinations(stream_identifier, source_identifier, last_processed_value, destinations)
                 
                 await asyncio.sleep(interval)
             else:
                 msg = await source_state.get()
-                await self._send_by_destinations(sensor_identifier, source_identifier, msg, destinations)
+                await self._send_by_destinations(stream_identifier, source_identifier, msg, destinations)
 
     
     def _wild_card_replace(self, endpoint: str, sensor_identifier: str, source_identifier: str, destination_identifier: str) -> str:
         endpoint = endpoint.replace("{device}", self.identifier)
-        endpoint = endpoint.replace("{sensor}", sensor_identifier)
+        endpoint = endpoint.replace("{stream}", sensor_identifier)
         endpoint = endpoint.replace("{source}", source_identifier)
         endpoint = endpoint.replace("{destination}", destination_identifier)
         

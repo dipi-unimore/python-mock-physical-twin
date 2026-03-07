@@ -52,22 +52,23 @@ devices:
         source: temperature
         destinations:
           mqtt:
-            endpoint: "{device}/{sensor}/{var:room1}/{source}"
+            endpoint: "{device}/{stream}/{var:room1}/{source}"
           http:
             endpoint: smarthome/temperature
           local:
-            endpoint: "{device}/{sensor}/{var:room1}/{source}.txt"
+            endpoint: "{device}/{stream}/{var:room1}/{source}.txt"
 
     sensors:
       temperature:
         source: temperature
+        logic: /home/nricciardi/Downloads/processor.py
         destinations:
           mqtt:
-            endpoint: "{device}/{sensor}/{var:room1}/{source}"
+            endpoint: "{device}/{stream}/{var:room1}/{source}"
           http:
             endpoint: smarthome/temperature
           local:
-            endpoint: "{device}/{sensor}/{var:room1}/{source}.txt"
+            endpoint: "{device}/{stream}/{var:room1}/{source}.txt"
             
       humidity:
         source: humidity
@@ -77,7 +78,7 @@ devices:
           http:
             endpoint: smarthome/humidity
           local:
-            endpoint: "{device}/{sensor}/{var:room2}/{source}.txt"
+            endpoint: "{device}/{stream}/{var:room2}/{source}.txt"
 
       air_quality:
         source: air_quality
