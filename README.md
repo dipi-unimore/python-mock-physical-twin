@@ -18,6 +18,8 @@ pip install -r requirements.txt
 Currently, MockPT is executed as a module through the CLI. To start the simulation with your configuration file:
 
 ```bash
+export PYTHONPATH=<mockpt-path>/src:$PYTHONPATH
+
 python src/cli --config path/to/your_config.yaml
 ```
 
@@ -179,11 +181,13 @@ broker_password: Optional[str] = None
 #### HTTP
 
 ```py
-path: str
-method: Literal["GET", "POST", "PUT", "DELETE"] = "POST"
+path: str    
 host: str = "0.0.0.0"
 port: int = 8080
 content_type: Optional[str] = None
+method: Literal["GET", "POST", "PUT", "DELETE"] = "PUT"
+ok_response_code: int = 201
+fail_response_code: int = 412
 ```
 
 > [!TIP]
@@ -193,20 +197,45 @@ content_type: Optional[str] = None
 
 ### Device
 
-Devices group sensors together. Each sensor maps a Source to one or more Destinations.
+Devices group **streams** together. Each stream has a **state** which is updated based on new data and a given **logic**. Data come from a *source* and devices notify sources about state transition outcomes. New state value is then propagated to one or more *destinations*.
 
-For every sensor you should provide:
+```mermaid
+flowchart TD
+
+    S --> DV
+    DV -.-> S
+    DV --> DS1
+    DV --> DS2
+    DV --> DS3
+
+    S@{ shape: cyl, label: "Source" }
+    DV@{ shape: rounded, label: "Device" }
+    DS1@{ shape: trap-b, label: "Destination 1" }
+    DS2@{ shape: trap-b, label: "Destination 2" }
+    DS3@{ shape: trap-b, label: "Destination 3" }
+```
+
+
+For every stream you should provide:
 
 - `source` from which data will be read
 - `interval` (optional) which enable a buffering mode, overriding source frequency
+- `logic` (optional, default *identity function*) represents state transition logic
 - `destinations` in which you must specify an `endpoint` (its meaning depends on destination; for example, it could be a topic for MQTT or url for HTTP) 
+
+Streams are **grouped** together in order to help user to separated streams logically. You can use arbitrary group names (excluded additional static field, i.e. `vars`).
+
+For example, in IoT context you could split *sensors* and *actuators*, placing streams that use MQTT or HTTP sources as actuators and others as sensors.
 
 You can use dynamic variables in your destination endpoints:
 
 - `{device}`: The name of the device.
-- `{sensor}`: The name of the sensor.
+- `{stream}`: The name of the stream.
 - `{source}`: The name of the used source.
 - `{var:variable_name}`: A static variable defined in the device's `vars` block.
+
+> [!WARNING]
+> Dynamic variables are replaced during configuration parsing.
 
 For example, a device called `smarthome` which has 2 sensors - `humidity` and `temperature` - in two different rooms and publishing both on MQTT and local file could have this following configuration:
 
@@ -222,9 +251,9 @@ devices:
         source: house1_temperature
         destinations:
           mqtt:
-            endpoint: "{device}/{sensor}/{var:room1}/{source}"
+            endpoint: "{device}/{stream}/{var:room1}/{source}"
           local:
-            endpoint: "{device}/{sensor}/{var:room1}/{source}"
+            endpoint: "{device}/{stream}/{var:room1}/{source}.jsonl"
             
       humidity:
         source: house1_humidity
@@ -232,11 +261,60 @@ devices:
           mqtt:
             endpoint: smarthome1/humidity
           local:
-            endpoint: "{device}/{sensor}/{var:room2}/{source}"
+            endpoint: "{device}/{stream}/{var:room2}/{source}.jsonl"
 ```
 
 > [!IMPORTANT]
-> If you use equal names for sources, destinations and sensors a prefix will be added to make them unique. Otherwise, if `--strict-config-validation` is set, then an errors is raised.
+> If you use equal names for sources, destinations and streams a prefix will be added to make them unique. Otherwise, if `--strict-config-validation` is set, then an errors is raised.
+
+#### Logic
+
+Logic manages the stream state transition. It is a class that inherits `StateLogic` base class. You should implement `process` method which takes new input data messages, (eventually) modifies them and returns.
+Returned data messages are used to update internal state storage.
+
+```py
+class StateLogic(ABC):
+    
+    @abstractmethod
+    def process(self, input: DataMessage) -> DataMessage:
+        pass
+```
+
+By default *identity function* is used as processing function:
+
+```py
+from typing import override
+
+from mockpt.common.message.data_message import DataMessage
+from mockpt.state.logic import StateLogic
+
+
+class IdentityStateLogic(StateLogic):
+    
+    @override
+    def process(self, input: DataMessage) -> DataMessage:
+        return input
+```
+
+> [!NOTE]
+> You can use additional function in the file to provide custom logic both in the class itself and in global scope.
+
+You can provided your custom logic implementing a `CustomStateLogic` class in a Python file `path/to/logic.py`, then you must provide it into stream configuration:
+
+```yaml
+sensors:
+  temperature:
+    source: house1_temperature
+    logic: "path/to/logic.py"
+    destinations:
+      mqtt:
+        endpoint: "{device}/{stream}/{var:room1}/{source}"
+      local:
+        endpoint: "{device}/{stream}/{var:room1}/{source}.jsonl"
+```
+
+
+
 
 
 ## Developer Guide
