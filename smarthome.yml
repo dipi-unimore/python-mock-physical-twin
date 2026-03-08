@@ -57,7 +57,7 @@ devices:
     sensors:
       temperature:
         source: temperature
-        logic: /home/nricciardi/Repositories/python-mock-physical-twin/processor.py
+        logic: ./processor.py
         destinations:
           mqtt:
             endpoint: "{device}/{stream}/{var:room1}/{source}"
@@ -98,8 +98,7 @@ devices:
 
     actuators:
       switch:
-        source: http  # server
-        function_path: /path/to/switch_function.py # input, current state -> new state | raise
+        source: http
         destinations:
           mqtt:
             endpoint: smarthome/switch

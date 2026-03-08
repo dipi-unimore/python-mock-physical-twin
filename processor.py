@@ -4,15 +4,15 @@ from mockpt.common.message.data_message import DataMessage
 from mockpt.state.logic import StateLogic
 
 
-def value() -> str:
-    return "ciao2"
+def value(v: int):
+    return { "value": v}
 
 
-class CiaoStateLogic(StateLogic):
+class FortyTwoStateLogic(StateLogic):
     
     @override
     def process(self, input: DataMessage) -> DataMessage:
         return DataMessage.of(
-            source_identifier=value(),
-            value=value()
+            source_identifier=input.source_identifier,
+            value=value(42)
         )
