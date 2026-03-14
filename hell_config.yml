@@ -17,7 +17,7 @@ devices:
     sensors:
       sensor1:
         source: s1
-        destinations:
-          d1:
-            endpoint: "{device}/{sensor}/{var:room1}/{source}"
+        # destinations:
+        #   d1:
+        #     endpoint: "{device}/{sensor}/{var:room1}/{source}"
             

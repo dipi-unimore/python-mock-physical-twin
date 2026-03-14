@@ -5,7 +5,7 @@ from mockpt.state.logic import StateLogic
 
 
 def value(v: int):
-    return { "value": v}
+    return { "value": v }
 
 
 class FortyTwoStateLogic(StateLogic):
