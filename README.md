@@ -249,47 +249,51 @@ devices:
       room2: bedroom
 
     sensors:
-      temperature:
-        source: house_temperature
+      temperature_sensor:
+        source: house_temperature_source
         destinations:
-          local:
+          local_destination:
             endpoint: "{device}/{stream}/{var:room1}/{source}.jsonl"
             
-      humidity:
-        source: house_humidity
+      humidity_sensor:
+        source: house_humidity_source
         destinations:
-          mqtt:
+          mqtt_destination:
             endpoint: smarthome/humidity
-          local:
+          local_destination:
             endpoint: "{device}/{stream}/{var:room2}/{source}.jsonl"
 
     actuators:
-      switch:
-        source: house_switch
+      switch_actuator:
+        source: house_switch_source
         logic: "path/to/switch_logic.py"
 ```
+
+In particular, in this example, there are 3 independent sources which serve 3 different states: switch (actuator), temperature (sensor) and humidity (sensor). This is reasonable, because we are considering completely different streams.
+
+Focussing on humidity stream, data are generated (or retrieved from disk/protocol based on source type) by `house_humidity_source` source (which is not shown in the YML) and sent to `humidity_sensor` stream (state). Given that there is no explicit `logic` parameter, identity function is used. This means that there are no data validation or manipulation and source data are exposed through `local_destination` and `mqtt_destination` destinations as-it-is.  
 
 ```mermaid
 flowchart TD
 
-    SR1@{ shape: cyl, label: "house_temperature" }
-    SR2@{ shape: cyl, label: "house_humidity" }
-    SR3@{ shape: cyl, label: "house_switch" }
+    SR1@{ shape: cyl, label: "house_temperature_source" }
+    SR2@{ shape: cyl, label: "house_humidity_source" }
+    SR3@{ shape: cyl, label: "house_switch_source" }
     
-    DS1@{ shape: trap-b, label: "mqtt" }
-    DS2@{ shape: trap-b, label: "local" }
+    DS1@{ shape: trap-b, label: "mqtt_destination" }
+    DS2@{ shape: trap-b, label: "local_destination" }
 
 
     subgraph Device ["smarthome"]
         direction TB
         
         subgraph SG1 ["sensors"]
-            ST1@{ shape: rounded, label: "temperature" }
-            ST2@{ shape: rounded, label: "humidity" }
+            ST1@{ shape: rounded, label: "temperature_sensor" }
+            ST2@{ shape: rounded, label: "humidity_sensor" }
         end
 
         subgraph SG2 ["actuators"]
-            ST3@{ shape: rounded, label: "switch" }
+            ST3@{ shape: rounded, label: "switch_actuator" }
         end
     end
 
@@ -304,6 +308,85 @@ flowchart TD
     ST2 --> DS2
 ```
 
+
+Let's consider another example: a set of meterological stations which have a rain gauge sensor which publish on MQTT.
+
+```yaml
+devices:
+  station1:
+    vars:
+      location: "Modena"
+    sensors:
+      rain_gauge_sensor:
+        source: rain_gauge_source
+        destinations:
+          mqtt_destination:
+            endpoint: "{device}/{var:location}"
+
+  station2:
+    vars:
+      location: "Reggio Emilia"
+    sensors:
+      rain_gauge_sensor:
+        source: rain_gauge_source
+        destinations:
+          mqtt_destination:
+            endpoint: "{device}/{var:location}"
+
+  station3:
+    vars:
+      location: "Mantova"
+    sensors:
+      rain_gauge_sensor:
+        source: rain_gauge_source
+        destinations:
+          mqtt_destination:
+            endpoint: "{device}/{var:location}"
+```
+
+In this case `rain_gauge_source` is shared among stations (so they will publish same data).
+
+```mermaid
+flowchart TD
+
+    SR1@{ shape: cyl, label: "rain_gauge_source" }
+    
+    DS1@{ shape: trap-b, label: "mqtt_destination" }
+
+
+    subgraph Device1 ["station1"]
+        direction TB
+        
+        subgraph SG1 ["sensors"]
+            ST1@{ shape: rounded, label: "rain_gauge_sensor" }
+        end
+    end
+
+    subgraph Device2 ["station2"]
+        direction TB
+        
+        subgraph SG2 ["sensors"]
+            ST2@{ shape: rounded, label: "rain_gauge_sensor" }
+        end
+    end
+
+    subgraph Device3 ["station3"]
+        direction TB
+        
+        subgraph SG3 ["sensors"]
+            ST3@{ shape: rounded, label: "rain_gauge_sensor" }
+        end
+    end
+
+
+    SR1 --> ST1
+    SR1 --> ST2
+    SR1 --> ST3
+
+    ST1 --> DS1
+    ST2 --> DS1
+    ST3 --> DS1
+```
 
 ### Destinations
 
