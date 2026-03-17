@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from typing import Literal, Optional, List, Any, Dict, override
 import aiomqtt
 from contextlib import AsyncExitStack
@@ -50,8 +51,12 @@ class MqttSource(DataStreamMixin, SourceBase):
 
     @override
     async def _datastream(self):
-        async for message in self.mqtt_client.messages:
-            payload = message.payload.decode()
-            await self._data_queue.put({
-                "value": payload
-            })
+        try:
+            async for message in self.mqtt_client.messages:
+                payload = message.payload.decode()
+                await self._data_queue.put({
+                    "value": payload
+                })
+                
+        except Exception as e:
+            logging.error(f"Error in MQTT datastream: {e}")

@@ -87,15 +87,7 @@ class Device(Core):
         source_identifier = config.source
         self._states_streams[source_identifier] = self._states_streams.get(source_identifier, []) + [state_stream]
         
-        
-    async def _on_stopping(self, *args, **kwargs):
-        await super()._on_stopping(*args, **kwargs)
-        
-        self._stop_event.set()
-        for task in self._loop_tasks:
-            await task
-            
-    
+
     @sink(
         operation_name=OperationName.NEXT
     )

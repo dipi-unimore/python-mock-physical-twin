@@ -1,3 +1,4 @@
+from contextlib import AsyncExitStack
 import logging
 from typing import Literal, Optional, Dict
 from dataclasses import dataclass, field
@@ -19,6 +20,7 @@ class HttpDestinationConfig(DestinationBaseConfig):
 class HttpDestination(DestinationBase):
     config: HttpDestinationConfig # type: ignore
     _session: Optional[aiohttp.ClientSession] = field(default=None, init=False)
+    _exit_stack: AsyncExitStack = field(default_factory=AsyncExitStack, init=False)
 
     def __post_init__(self):
         super().__post_init__()
@@ -26,14 +28,17 @@ class HttpDestination(DestinationBase):
     async def _on_starting(self, *args, **kwargs):
         await super()._on_starting(*args, **kwargs)
         
-        self._session = aiohttp.ClientSession(
+        session = aiohttp.ClientSession(
             base_url=self.config.base_url,
             headers=self.config.headers
         )
         
+        self._session = await self._exit_stack.enter_async_context(session)
+        
     async def _on_stopping(self, *args, **kwargs):
-        if self._session:
-            await self._session.close()
+        
+        if self._session is not None:
+            await self._exit_stack.aclose()
             self._session = None
             
         await super()._on_stopping(*args, **kwargs)

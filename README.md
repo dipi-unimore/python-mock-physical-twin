@@ -7,20 +7,17 @@ Built on top of [Orbitalis](https://github.com/orbitalis-framework/py-orbitalis)
 
 ## Installation
 
-Ensure you have Python 3.12+ installed. Clone the repository and install the dependencies:
+Ensure you have Python 3.12+ installed. Clone the repository and install the dependencies. This project uses [uv](https://docs.astral.sh/uv/getting-started/installation/) to provide a ready-to-use CLI:
 
 ```bash
-pip install -r requirements.txt
-```
+cd path/to/mockpt
 
-## CLI Running
+uv tool install .
+mockpt -h
 
-Currently, MockPT is executed as a module through the CLI. To start the simulation with your configuration file:
+# or
 
-```bash
-export PYTHONPATH=<mockpt-path>/src:$PYTHONPATH
-
-python src/cli --config path/to/your_config.yaml
+uv run mockpt -h
 ```
 
 CLI Options:
@@ -662,6 +659,12 @@ devices:
 
 MockPT is built with extensibility in mind. The core logic relies on a Dispatcher pattern and asyncio tasks.
 
+First of all, you should install requirements:
+
+```bash
+pip install -r requirements.txt
+```
+
 ### Architecture Overview
 
 Each sensor defined in the configuration is instantiated as a concurrent task. The system resolves the requested Source and connects it to the defined Destinations. To prevent naming collisions between different modules, MockPT internally wraps entities with unique identifiers if names overlap.
@@ -687,3 +690,10 @@ Destinations follow a similar pattern in `destinations/`:
 2. Implement the Logic: Inherit from `DestinationBase` and implement the `_send` method.
 3. Register the Destination: Update the destination dispatcher logic to recognize your new type.
 
+
+
+## Author
+
+### Nicola Ricciardi
+
+### Marco Picone

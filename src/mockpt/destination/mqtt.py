@@ -11,8 +11,8 @@ from mockpt.common.message.data_message import DataMessage
 
 class MqttDestinationConfig(DestinationBaseConfig):
     type: Literal[DestinationName.MQTT.value] = DestinationName.MQTT.value # type: ignore
-    broker_hostname: str
-    broker_port: int
+    broker_hostname: str = "localhost"
+    broker_port: int = 1883
     broker_username: Optional[str] = None
     broker_password: Optional[str] = None
     qos: int = 2

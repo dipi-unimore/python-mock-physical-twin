@@ -9,7 +9,7 @@ from busline.local.eventbus.local_eventbus import LocalEventBus
 from busline.local.local_publisher import LocalPublisher
 from busline.local.local_subscriber import LocalSubscriber
 
-from app_config import AppConfig
+from .app_config import AppConfig
 from mockpt.common import id_wrapper
 from mockpt.destination.base import DestinationBase
 from mockpt.destination import destination_class_by_type
@@ -124,7 +124,7 @@ def build_devices(devices_configs: Dict[str, DeviceConfig]) -> Dict[str, Device]
     return devices
 
 
-async def main(options: CliOptions):
+async def cli(options: CliOptions):
     setup_logging(options.log)
     
     logger = logging.getLogger(__name__)
@@ -213,11 +213,37 @@ async def main(options: CliOptions):
     for source in sources.values():
         await source.turn_on_datastream()
     
-    while True:
-        await asyncio.sleep(0)
+    stop_event = asyncio.Event()
 
-if __name__ == "__main__":
+    try:
+        logger.info("Application is running. Press Ctrl+C to stop.")
+        await stop_event.wait() 
+        
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        logger.info("Shutting down application...")
+        
+    finally:
+        for destination in destinations.values():
+            await destination.stop()
+            
+        for source in sources.values():
+            await source.stop()
+            
+        for device in devices.values():
+            await device.stop()
+
+        await asyncio.sleep(0.250)
+        logger.info("Application stopped.")
+
+
+def main():
     parser = ArgumentParser(CliOptions)
     options: CliOptions = parser.parse_args()
         
-    asyncio.run(main(options))
+    try:
+        asyncio.run(cli(options))
+    except KeyboardInterrupt:
+        logging.info("Bye!")
+
+if __name__ == "__main__":
+    main()
