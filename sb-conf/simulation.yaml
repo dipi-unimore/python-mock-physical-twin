@@ -1,7 +1,7 @@
 simulation:
   request_id: abcdef12345
   client_id: dt
-  simulator: matlab
+  simulator: anylogic
   type: streaming
   file: SimulationStreaming.m
   timestamp: "2024-01-01T00:00:00Z" # Timestamp for the simulation request in ISO 8601 format

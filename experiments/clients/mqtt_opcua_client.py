@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 DEFAULT_MOCKPT_BROKER_IP = "192.168.0.115"
 DEFAULT_MOCKPT_BROKER_PORT = 1883
 DEFAULT_MOCKPT_TARGET_TOPIC_LIST = ["device/MQTT_Device/telemetry"]
-DEFAULT_OPCUA_SERVER_URL = "opc.tcp://localhost:4840/freeopcua/server/"
+#DEFAULT_OPCUA_SERVER_URL = "opc.tcp://localhost:4840/freeopcua/server/"
+DEFAULT_OPCUA_SERVER_URL = "opc.tcp://192.168.0.115/freeopcua/server/"
 DEFAULT_OPCUA_NODE_IDS = ["ns=2;s=OPCUA_Device.sensor_accel"]  # Example Node IDs to monitor
 DEFAULT_POLLING_INTERVAL = 2  # seconds
 DEFAULT_MQTT_PUBLISH_TOPIC = "processed/data"

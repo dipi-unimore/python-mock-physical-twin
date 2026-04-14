@@ -1,0 +1,191 @@
+==========================================================================================
+  MQTT MESSAGE TRACES ANALYSIS REPORT
+==========================================================================================
+
+  Total time windows: 17
+
+------------------------------------------------------------------------------------------
+
+  Window              : 2025-11-18 15:53
+  Messages            : 1007
+  Time span (sec)     : 10.661
+  Message rate (msg/s): 94.4564
+  Avg payload size (B): 161.0
+  Avg payload props   : 7.0
+  Unique properties   : 7
+  Property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+------------------------------------------------------------------------------------------
+
+  Window              : 2025-11-18 15:54
+  Messages            : 3182
+  Time span (sec)     : 33.701
+  Message rate (msg/s): 94.4186
+  Avg payload size (B): 161.0
+  Avg payload props   : 7.0
+  Unique properties   : 7
+  Property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+------------------------------------------------------------------------------------------
+
+  Window              : 2025-11-18 15:55
+  Messages            : 4842
+  Time span (sec)     : 51.325
+  Message rate (msg/s): 94.34
+  Avg payload size (B): 330.07
+  Avg payload props   : 7.0
+  Unique properties   : 7
+  Property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+------------------------------------------------------------------------------------------
+
+  Window              : 2025-11-18 15:56
+  Messages            : 5658
+  Time span (sec)     : 59.971
+  Message rate (msg/s): 94.3456
+  Avg payload size (B): 332.25
+  Avg payload props   : 7.0
+  Unique properties   : 7
+  Property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+------------------------------------------------------------------------------------------
+
+  Window              : 2025-11-18 15:57
+  Messages            : 5664
+  Time span (sec)     : 59.993
+  Message rate (msg/s): 94.411
+  Avg payload size (B): 333.47
+  Avg payload props   : 7.0
+  Unique properties   : 7
+  Property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+------------------------------------------------------------------------------------------
+
+  Window              : 2025-11-18 15:58
+  Messages            : 5660
+  Time span (sec)     : 59.946
+  Message rate (msg/s): 94.4183
+  Avg payload size (B): 331.49
+  Avg payload props   : 7.0
+  Unique properties   : 7
+  Property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+------------------------------------------------------------------------------------------
+
+  Window              : 2025-11-18 15:59
+  Messages            : 5661
+  Time span (sec)     : 59.981
+  Message rate (msg/s): 94.3799
+  Avg payload size (B): 331.29
+  Avg payload props   : 7.0
+  Unique properties   : 7
+  Property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+------------------------------------------------------------------------------------------
+
+  Window              : 2025-11-18 16:00
+  Messages            : 5659
+  Time span (sec)     : 59.965
+  Message rate (msg/s): 94.3717
+  Avg payload size (B): 332.74
+  Avg payload props   : 7.0
+  Unique properties   : 7
+  Property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+------------------------------------------------------------------------------------------
+
+  Window              : 2025-11-18 16:01
+  Messages            : 5249
+  Time span (sec)     : 55.587
+  Message rate (msg/s): 94.4286
+  Avg payload size (B): 334.05
+  Avg payload props   : 7.0
+  Unique properties   : 7
+  Property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+------------------------------------------------------------------------------------------
+
+  Window              : 2025-11-18 16:02
+  Messages            : 5607
+  Time span (sec)     : 59.285
+  Message rate (msg/s): 94.577
+  Avg payload size (B): 334.6
+  Avg payload props   : 7.0
+  Unique properties   : 7
+  Property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+------------------------------------------------------------------------------------------
+
+  Window              : 2025-11-18 16:03
+  Messages            : 10099
+  Time span (sec)     : 59.994
+  Message rate (msg/s): 168.3335
+  Avg payload size (B): 338.13
+  Avg payload props   : 3.93
+  Unique properties   : 7
+  Property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+------------------------------------------------------------------------------------------
+
+  Window              : 2025-11-18 16:04
+  Messages            : 11326
+  Time span (sec)     : 59.997
+  Message rate (msg/s): 188.7761
+  Avg payload size (B): 339.23
+  Avg payload props   : 3.5
+  Unique properties   : 7
+  Property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+------------------------------------------------------------------------------------------
+
+  Window              : 2025-11-18 16:05
+  Messages            : 11319
+  Time span (sec)     : 59.991
+  Message rate (msg/s): 188.6783
+  Avg payload size (B): 335.77
+  Avg payload props   : 3.5
+  Unique properties   : 7
+  Property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+------------------------------------------------------------------------------------------
+
+  Window              : 2025-11-18 16:06
+  Messages            : 11319
+  Time span (sec)     : 59.99
+  Message rate (msg/s): 188.6814
+  Avg payload size (B): 336.85
+  Avg payload props   : 3.5
+  Unique properties   : 7
+  Property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+------------------------------------------------------------------------------------------
+
+  Window              : 2025-11-18 16:07
+  Messages            : 11320
+  Time span (sec)     : 59.983
+  Message rate (msg/s): 188.7201
+  Avg payload size (B): 338.83
+  Avg payload props   : 3.5
+  Unique properties   : 7
+  Property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+------------------------------------------------------------------------------------------
+
+  Window              : 2025-11-18 16:08
+  Messages            : 11187
+  Time span (sec)     : 59.97
+  Message rate (msg/s): 186.5433
+  Avg payload size (B): 336.78
+  Avg payload props   : 3.54
+  Unique properties   : 7
+  Property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+------------------------------------------------------------------------------------------
+
+  Window              : 2025-11-18 16:09
+  Messages            : 301
+  Time span (sec)     : 3.224
+  Message rate (msg/s): 93.3623
+  Avg payload size (B): 333.59
+  Avg payload props   : 7.0
+  Unique properties   : 7
+  Property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+------------------------------------------------------------------------------------------
+
+==========================================================================================
+  GLOBAL STATISTICS (entire file)
+==========================================================================================
+
+  Total messages            : 115060
+  Total time span (sec)     : 913.901
+  Global message rate (msg/s): 125.8999
+  Global avg payload size (B): 329.21
+  Global avg payload props   : 5.02
+  Global unique properties   : 7
+  Global property names      : bridge_value, id, last_update_time_ms, node_id, source, source_id, value
+
+==========================================================================================

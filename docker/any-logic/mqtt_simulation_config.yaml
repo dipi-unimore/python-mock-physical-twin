@@ -1,0 +1,30 @@
+protocols:
+  - id: "mqttProtocol"
+    type: "mqtt"
+    config:
+      broker_ip: "192.168.0.115"
+      broker_port: 1883
+      username: null
+      password: null
+devices:
+  - id: "device1" # Unique identifier for the device
+    protocol_id: "mqttProtocol" # Which publishing protocol the device uses (e.g., HTTP)
+    sensors:
+      - id: "all_in_one"
+        type: "json"
+        source: "bridge"
+        source_id: "simBridge1"
+        update_time_ms: 10
+        bridge_value: "data"
+    actuators:
+      - id: "demoActuator"
+        type: "string"
+        initial_value: "ON"
+data_providers:
+  # Defines the data provider used for simulation (Simulation Bridge).
+  - source_id: "simBridge1" # Unique identifier for the simulation data provider
+    type: "simulation_bridge" # The type of data provider (Simulation Bridge)
+    protocol_config: "mqtt_use.yaml" # Path to external configuration for transport protocol
+    payload_config: "simulation.yaml" # Path to external configuration for simulation payload
+independent_communication: True
+device_update_delay_ms: 10

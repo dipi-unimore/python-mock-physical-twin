@@ -1,0 +1,10 @@
+mqtt:
+  host: "duck.lmq.cloudamqp.com"
+  port: 8883
+  keepalive: 60
+  qos: 0
+  input_topic: "bridge/input"
+  output_topic: "bridge/output"
+  username: "bcvaygsg:bcvaygsg"
+  password: "QvgUE-TqmQjYMZgVVbftaidnYsUL9PQM"
+  tls: true
