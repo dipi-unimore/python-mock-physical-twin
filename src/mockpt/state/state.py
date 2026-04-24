@@ -15,6 +15,12 @@ class State:
     async def put(self, value: DataMessage):
         
         value = self.logic.process(value)
+        
+        # TODO:
+        # - More pervasive way to modify state from logic class
+        # - Init params for logic class from yaml
+        # - Pre-define some logic classes (e.g. identity, delay, corruption by dev, loss, chaotic with all previous etc.); for delay maybe use a sleep before queue.put
+        
     
         await self.queue.put(value)
             
