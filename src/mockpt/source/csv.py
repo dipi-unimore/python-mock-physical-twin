@@ -9,6 +9,27 @@ from mockpt.source.datastream_mixin import DataStreamMixin
 from mockpt.source.enum import SourceName
 
 
+# TODO:
+# More CSV files with same headers and time column should be "merged" into a single stream, sorted by timestamp. 
+# This would allow for more complex scenarios where data is split across multiple files but still needs to be processed in chronological order.
+# For example, A and B files
+# A:
+# 1, a
+# 4, b
+# 5, c
+# B:
+# 2, d
+# 3, e
+# 4, f
+# The output sequence would be:
+# 1, a
+# 2, d
+# 3, e
+# 4, b
+# 4, f
+# 5, c
+
+
 class CsvSourceConfig(SourceBaseConfig):
     type: Literal[SourceName.CSV.value] = SourceName.CSV.value # type: ignore
     file: str
