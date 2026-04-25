@@ -1,6 +1,9 @@
 .vscode/*
 output
 
+# macOS
+.DS_Store
+
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
 # Byte-compiled / optimized / DLL files
@@ -189,3 +192,5 @@ fabric.properties
 
 # Ignore CSV Files
 csv
+
+.DS_Store

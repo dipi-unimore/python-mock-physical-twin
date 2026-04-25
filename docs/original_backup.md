@@ -1,30 +1,10 @@
-<div align="center">
-  <img src="https://github.com/dipi-unimore/python-mock-physical-twin/images/logo.png" alt="MockPT Logo" height="100">
-</div>
-
 # Mock Physical Twin (MockPT)
 
-![MockPT High Level Idea](images/high_level_idea.jpg)
+MockPT is a lightweight, asynchronous Python-based simulator designed to bridge the gap between static data and live 
+Internet of Things (IoT) ecosystems. Whether you need to simulate a fleet of sensors using historical CSV data, generate synthetic 
+noise via statistical distributions, or pipe data from one protocol to another. MockPT helps you to build your Digital Twins.
 
-> [!IMPORTANT]
-> **You don't always have the IoT device sitting on your desk.** Maybe you have historical data and need to build an application on top of it. Maybe you want to test a protocol, validate a pipeline, or configure complex multi-device scenarios — without waiting for physical hardware. Focus on developing your application: MockPT will take care of the rest.
-
-MockPT is a lightweight, asynchronous Python-based simulator that acts as a **Mock Physical Twin** for IoT ecosystems. It lets you replace real physical devices with configurable software simulators, feeding your stack with realistic data streams through the same protocols your production devices would use.
-
-Whether you need to:
-
-- **replay historical data** from CSV files with timing management,
-- **generate synthetic values** via statistical distributions (e.g. uniform, gaussian),
-- **bridge protocols** by consuming data from MQTT or HTTP and republishing it elsewhere,
-- or **simulate entire device fleets** with independent streams and custom logic —
-
-MockPT also provides a set of built-in components, including MQTT and HTTP integrations as well as CSV reading capabilities. At the same time, it is designed with a modular architecture so you can extend it with new protocols, custom connectors (including database connectors), and dedicated simulators tailored to your domain.
-
-The project lets you define and execute multiple CLI configurations, making it easy to manage different test scenarios built on the same dataset.
-
-MockPT provides a fully functional, protocol-compatible data layer that integrates seamlessly with IoT application services and Digital Twin design and development workflows.
-
-Built on top of [Orbitalis](https://github.com/orbitalis-framework/py-orbitalis) (`asyncio`-based), it is designed for high modularity, extensibility, and deployment flexibility.
+Built on top of [Orbitalis](https://github.com/orbitalis-framework/py-orbitalis) (`asyncio`-based), it is designed for high modularity development and deployment.
 
 ## Installation
 
@@ -47,9 +27,9 @@ CLI Options:
 - `--log`: Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).
 - `--strict-config-validation`: Enable strict validation to ensure your config adheres strictly to the schema.
 
-<!-- ## Development & Direct Execution 
+## Development & Direct Execution 
 
-... -->
+...
 
 ## Concepts & Main Components
 
@@ -719,30 +699,6 @@ Destinations follow a similar pattern in `destinations/`:
 ## Author
 
 <div style="display: flex; flex-direction: column; gap: 25px;">
-    <!-- Marco Picone --> 
-    <div style="display: flex; align-items: center; gap: 15px;"> 
-        <img src="images/picone.jpeg" width="60" style="border-radius: 50%; border: 2px solid #eee;"/> 
-        <div> 
-            <h3 style="margin: 0;">Prof. Marco Picone</h3> 
-            <p style="margin: 4px 0;">Associate Professor<br> University of Modena and Reggio Emilia, Department of Sciences and Methods for Engineering (DISMI)</p> 
-            <div> 
-                <a href="https://www.linkedin.com/in/marco-picone-8a6a4612/"> <img src="https://img.shields.io/badge/LinkedIn-Connect-blue?style=flat-square&logo=linkedin"/> </a> 
-                <a href="https://github.com/piconem" style="margin-left: 8px;"> <img src="https://img.shields.io/badge/GitHub-Profile-black?style=flat-square&logo=github"/> </a> 
-            </div> 
-        </div> 
-    </div>
-    <!-- Nicola Ricciardi --> 
-    <div style="display: flex; align-items: center; gap: 15px;"> 
-        <img src="images/ricciardi.png" width="60" style="border-radius: 50%; border: 2px solid #eee;"/> 
-        <div> 
-            <h3 style="margin: 0;">Nicola Ricciardi</h3> 
-            <p style="margin: 4px 0;">Student<br>University of Modena and Reggio Emilia, Department of Sciences and Methods for Engineering (DISMI)</p> 
-            <div> 
-                <a href="https://www.linkedin.com/in/nicola-ricciardi-9982a1297/"><img src="https://img.shields.io/badge/LinkedIn-Connect-blue?style=flat-square&logo=linkedin"/> </a> 
-                <a href="https://github.com/nricciardi" style="margin-left: 8px;"> <img src="https://img.shields.io/badge/GitHub-Profile-black?style=flat-square&logo=github"/> </a> 
-            </div> 
-        </div> 
-    </div>
     <!-- Marco Melloni --> 
     <div style="display: flex; align-items: center; gap: 15px;"> 
         <img src="images/melloni.jpg" width="60" style="border-radius: 50%; border: 2px solid #eee;"/> 
@@ -752,6 +708,18 @@ Destinations follow a similar pattern in `destinations/`:
             <div> 
                 <a href="https://www.linkedin.com/in/marco-melloni/"><img src="https://img.shields.io/badge/LinkedIn-Connect-blue?style=flat-square&logo=linkedin"/> </a> 
                 <a href="https://github.com/marcomelloni" style="margin-left: 8px;"> <img src="https://img.shields.io/badge/GitHub-Profile-black?style=flat-square&logo=github"/> </a> 
+            </div> 
+        </div> 
+    </div>
+    <!-- Marco Picone --> 
+    <div style="display: flex; align-items: center; gap: 15px;"> 
+        <img src="images/picone.jpeg" width="60" style="border-radius: 50%; border: 2px solid #eee;"/> 
+        <div> 
+            <h3 style="margin: 0;">Prof. Marco Picone</h3> 
+            <p style="margin: 4px 0;">Associate Professor<br> University of Modena and Reggio Emilia, Department of Sciences and Methods for Engineering (DISMI)</p> 
+            <div> 
+                <a href="https://www.linkedin.com/in/marco-picone-8a6a4612/"> <img src="https://img.shields.io/badge/LinkedIn-Connect-blue?style=flat-square&logo=linkedin"/> </a> 
+                <a href="https://github.com/piconem" style="margin-left: 8px;"> <img src="https://img.shields.io/badge/GitHub-Profile-black?style=flat-square&logo=github"/> </a> 
             </div> 
         </div> 
     </div>
