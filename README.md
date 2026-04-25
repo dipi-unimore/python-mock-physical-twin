@@ -1,13 +1,12 @@
+# Mock Physical Twin (MockPT)
+
 <div align="center">
   <img src="https://github.com/dipi-unimore/python-mock-physical-twin/blob/master/images/logo.png?raw=true" alt="MockPT Logo" height="300">
 </div>
 
-# Mock Physical Twin (MockPT)
+> **You don't always have the IoT device sitting on your desk.** Maybe you have historical data and need to build an application on top of it. Maybe you want to test a protocol, validate a pipeline, or configure complex multi-device scenarios — without waiting for physical hardware. Focus on developing your application: MockPT will take care of the rest.
 
 ![MockPT High Level Idea](images/high_level_idea.jpg)
-
-> [!IMPORTANT]
-> **You don't always have the IoT device sitting on your desk.** Maybe you have historical data and need to build an application on top of it. Maybe you want to test a protocol, validate a pipeline, or configure complex multi-device scenarios — without waiting for physical hardware. Focus on developing your application: MockPT will take care of the rest.
 
 MockPT is a lightweight, asynchronous Python-based simulator that acts as a **Mock Physical Twin** for IoT ecosystems. It lets you replace real physical devices with configurable software simulators, feeding your stack with realistic data streams through the same protocols your production devices would use.
 
