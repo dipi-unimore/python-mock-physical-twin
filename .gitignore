@@ -192,5 +192,3 @@ fabric.properties
 
 # Ignore CSV Files
 csv
-
-.DS_Store
