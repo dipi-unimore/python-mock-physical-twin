@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/dipi-unimore/python-mock-physical-twin/blob/master/images/logo.png?raw=true" alt="MockPT Logo" height="100">
+  <img src="https://github.com/dipi-unimore/python-mock-physical-twin/blob/master/images/logo.png?raw=true" alt="MockPT Logo" height="300">
 </div>
 
 # Mock Physical Twin (MockPT)
