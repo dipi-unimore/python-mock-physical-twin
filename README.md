@@ -769,5 +769,3 @@ Destinations follow a similar pattern in `destinations/`:
     </div> 
 </div>
 
-### Nicola Ricciardi
-
