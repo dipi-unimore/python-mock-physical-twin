@@ -17,7 +17,7 @@ destinations:
 sources:
   humidity:
     type: csv
-    file: examples/data/humidity.csv
+    files: examples/data/humidity.csv
     timestamp_column: timestamp
 
   temperature:

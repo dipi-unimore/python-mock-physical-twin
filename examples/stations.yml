@@ -1,7 +1,7 @@
 sources:
   rain_gauge_source:
     type: csv
-    file: examples/data/rain_gauge.csv
+    files: examples/data/rain_gauge.csv
     timestamp_column: timestamp
 
 destinations:

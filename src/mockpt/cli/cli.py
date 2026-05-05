@@ -9,7 +9,7 @@ from busline.local.eventbus.local_eventbus import LocalEventBus
 from busline.local.local_publisher import LocalPublisher
 from busline.local.local_subscriber import LocalSubscriber
 
-from .app_config import AppConfig
+from mockpt.cli.app_config import AppConfig
 from mockpt.common import id_wrapper
 from mockpt.destination.base import DestinationBase
 from mockpt.destination import destination_class_by_type

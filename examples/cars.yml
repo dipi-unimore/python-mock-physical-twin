@@ -1,0 +1,35 @@
+sources:
+  position_with_timestamp:
+    type: csv
+    files: 
+      - examples/data/position/position1.csv
+      - examples/data/position/position2.csv
+    timestamp_column: timestamp
+    timestamp_format: "ISO8601"
+  position_without_timestamp:
+    type: csv
+    files: 
+      - examples/data/position/position1_without_ts.csv
+      - examples/data/position/position2_without_ts.csv
+    interval: 1
+
+destinations:
+  mqtt_destination:
+    type: mqtt
+
+devices:
+  car1:
+    sensors:
+      position_sensor:
+        source: position_with_timestamp
+        destinations:
+          mqtt_destination:
+            endpoint: "position/{device}"
+
+  car2:
+    sensors:
+      position_sensor:
+        source: position_without_timestamp
+        destinations:
+          mqtt_destination:
+            endpoint: "position_without_ts/{device}"
