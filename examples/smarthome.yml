@@ -30,7 +30,7 @@ sources:
 
   air_quality:
     type: mqtt
-    topic: smarthome/air_quality
+    topics: smarthome/air_quality
     broker_hostname: localhost
     broker_port: 1883
 

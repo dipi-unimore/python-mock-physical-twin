@@ -12,7 +12,7 @@ from mockpt.source.enum import SourceName
 
 class MqttSourceConfig(SourceBaseConfig):
     type: Literal[SourceName.MQTT.value] = SourceName.MQTT.value # type: ignore
-    topic: str
+    topics: str | List[str]
     broker_hostname: str = "localhost"
     broker_port: int = 1883
     broker_username: Optional[str] = None
@@ -39,8 +39,12 @@ class MqttSource(DataStreamMixin, SourceBase):
         # Enter the aiomqtt context manager and keep the connection open
         self.mqtt_client = await self._exit_stack.enter_async_context(client)
         
-        await self.mqtt_client.subscribe(self.config.topic)
-        
+        if isinstance(self.config.topics, str):
+            await self.mqtt_client.subscribe(self.config.topics)
+        else:
+            for topic in self.config.topics:
+                await self.mqtt_client.subscribe(topic)
+
     async def _on_stopping(self, *args, **kwargs):
         # Close the ExitStack, which will in turn close the connection to the broker cleanly
         if self._exit_stack:
